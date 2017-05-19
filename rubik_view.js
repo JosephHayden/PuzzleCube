@@ -14,16 +14,20 @@ var camera;
 function Camera(position, target) {
 	this.position = $V(position);
 	this.target = $V(target);
+	this.xAngle = 0;
+	this.yAngle = 0;
+	this.transformMatrix = Matrix.I(4);
+	this.viewMatrix = Matrix.I(4);
 	
 	this.updateLookAt = function(p, t) {
 		var cameraDirection = p.subtract(t).toUnitVector();
-		var up = $V([0.0, 1.0, 0.0]); 
-		var cameraRight = (up.cross(cameraDirection)).toUnitVector();
-		var cameraUp = (cameraDirection.cross(cameraRight));
+		var up = $V([0.0, 1.0, 0.0]);
+		this.cameraRight = (up.cross(cameraDirection)).toUnitVector();
+		this.cameraUp = (cameraDirection.cross(this.cameraRight));
 		
 		this.lookAt = $M([
-			[cameraRight.e(1), cameraRight.e(2), cameraRight.e(3), 0],
-			[cameraUp.e(1), cameraUp.e(2), cameraUp.e(3), 0],
+			[this.cameraRight.e(1), this.cameraRight.e(2), this.cameraRight.e(3), 0],
+			[this.cameraUp.e(1), this.cameraUp.e(2), this.cameraUp.e(3), 0],
 			[cameraDirection.e(1), cameraDirection.e(2), cameraDirection.e(3), 0],
 			[0, 0, 0, 1]
 		]).x($M([
@@ -36,9 +40,21 @@ function Camera(position, target) {
 	
 	this.updateLookAt(this.position, this.target);
 	
-	this.rotate = function(angle){
-		this.target = $V(this.target).rotate(angle, Line.create([0, 0, 0], [0, 1, 0]));
+	this.rotateY = function(angle){
+		this.position = $V(this.position).rotate(angle, Line.create([this.target.e(1), this.target.e(2), this.target.e(3)], 
+													[0, 1, 0]));
+		this.yAngle += angle;
 		this.updateLookAt(this.position, this.target);
+	}
+	
+	this.rotateX = function(angle){
+		if(Math.abs(this.xAngle + angle) < Math.PI / 2){
+			// Only allow update if not going to cross y plane.
+			this.position = $V(this.position).rotate(angle, Line.create([this.target.e(1), this.target.e(2), this.target.e(3)], 
+														[this.cameraRight.e(1), this.cameraRight.e(2), this.cameraRight.e(3)]));
+			this.xAngle += angle;
+			this.updateLookAt(this.position, this.target);
+		}
 	}
 	
 	this.translate = function(direction){
@@ -73,7 +89,7 @@ function CubeViewModel(dimension, cubeSize) {
 	}
 }
 
-var cvm = new CubeViewModel(3, 2.1);
+var cvm = new CubeViewModel(3, 2.02);
 start();
 
 //
@@ -99,7 +115,7 @@ function start() {
   initShaders();
   initBuffers();
   
-  camera = new Camera([0, 0, 0], [0, 0, -1]);
+  camera = new Camera([0, 0, 0], [0, 0, -20]);
   
   canvas.setAttribute("tabindex", 0); // So canvas can get focus.
   canvas.addEventListener( "keydown", keyDown, true);
@@ -109,23 +125,17 @@ function start() {
 
 function keyDown(event){
 	var key = event.keyCode;
-	var isShift;
-	isShift = !!window.event.shiftKey; // typecast to boolean
-	if(isShift){
-		key -= 20;
+	if(key == 68){ // d
+		camera.rotateY(Math.PI/32);
 	}
-	console.log(key);
-	if(key == 65){
-		camera.translate([-0.5, 0, 0]);
+	if(key == 65){ // a
+		camera.rotateY(-Math.PI/32);
 	}
-	if(key == 68){
-		camera.translate([0.5, 0, 0]);
+	if(key == 83){ // s
+		camera.rotateX(Math.PI/32);
 	}
-	if(key == 45){
-		camera.rotate(Math.PI/16);
-	}
-	if(key == 48){
-		camera.rotate(-Math.PI/16);
+	if(key == 87){ // w
+		camera.rotateX(-Math.PI/32);
 	}
 }
 
@@ -224,11 +234,10 @@ function initBuffers() {
 		1.0, -1.0, -1.0,
 		-1.0, -1.0, -1.0,
 	];
-	
-	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
-	
+		
+	/*
 	cubeIndicesBuffer = gl.createBuffer();
-	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeIndicesBuffer);
+	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeIndicesBuffer);*/
 	
 	var indices = [
 		0, 1, 2, 
@@ -238,7 +247,7 @@ function initBuffers() {
 		6, 4, 0,
 		2, 6, 0, // Right
 		1, 5, 7,
-		3, 1, 6, // Left
+		7, 1, 3, // Left
 		0, 4, 5,
 		0, 5, 1, // Top
 		2, 3, 7,
@@ -252,7 +261,9 @@ function initBuffers() {
 		dupe_vertices = dupe_vertices.concat(x);
 	}
 	
-	gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(dupe_vertices), gl.STATIC_DRAW);
+	
+	//gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
 	
 	cubeColorBuffer = gl.createBuffer();
 	gl.bindBuffer(gl.ARRAY_BUFFER, cubeColorBuffer);
@@ -260,37 +271,40 @@ function initBuffers() {
 	var colors = [
 		1, 0, 0,
 		1, 0, 0,
-		0, 1, 0,
-		0, 1, 0,
-		0, 0, 1,
-		0, 0, 1,
-		1, 1, 0,
-		1, 1, 0,
-		1, 0, 1,
-		1, 0, 1,
-		0, 1, 1,
-		0, 1, 1,
-	];
-	
-	var colors = [
 		1, 0, 0,
 		1, 0, 0,
 		1, 0, 0,
+		1, 0, 0, // Face 1
 		0, 1, 0,
 		0, 1, 0,
 		0, 1, 0,
+		0, 1, 0,
+		0, 1, 0,
+		0, 1, 0, // Face 2
 		0, 0, 1,
 		0, 0, 1,
 		0, 0, 1,
+		0, 0, 1,
+		0, 0, 1,
+		0, 0, 1, // Face 3
 		1, 1, 0,
 		1, 1, 0,
 		1, 1, 0,
+		1, 1, 0,
+		1, 1, 0,
+		1, 1, 0, // Face 4
 		1, 0, 1,
 		1, 0, 1,
 		1, 0, 1,
+		1, 0, 1,
+		1, 0, 1,
+		1, 0, 1, // Face 5
 		0, 1, 1,
 		0, 1, 1,
 		0, 1, 1,
+		0, 1, 1,
+		0, 1, 1,
+		0, 1, 1 // Face 6
 	];
 	gl.bufferData(gl.ARRAY_BUFFER, new Uint16Array(colors), gl.STATIC_DRAW);
 }
@@ -304,23 +318,22 @@ function drawScene(time) {
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 	perspectiveMatrix = makePerspective(45, horizAspect, 0.1, 100.0);
 	
-	gl.bindBuffer(gl.ARRAY_BUFFER, cubeVerticesBuffer);
-	gl.vertexAttribPointer(vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0);
 	var colorUniform = gl.getUniformLocation(shaderProgram, "color");
 	gl.uniform3fv(colorUniform, [0.0, 0.0, 255]);
 	
-	gl.enableVertexAttribArray(1);
+	gl.enableVertexAttribArray(vertexPositionAttribute);
+	gl.bindBuffer(gl.ARRAY_BUFFER, cubeVerticesBuffer);
+	gl.vertexAttribPointer(vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0);
+	
+	gl.enableVertexAttribArray(vertexColorAttribute);
 	gl.bindBuffer(gl.ARRAY_BUFFER, cubeColorBuffer);
 	gl.vertexAttribPointer(vertexColorAttribute, 3, gl.SHORT, false, 0, 0);
 	
-	
 	for(var cellIdx=0; cellIdx < cvm.cells.length; cellIdx++){
 		loadIdentity();
-		mvScale(1);
-		mvRotate(0.1);
 		mvTranslate([cvm.cells[cellIdx][0], cvm.cells[cellIdx][1], cvm.cells[cellIdx][2] - 20]);
 		setMatrixUniforms();
-		gl.drawElements(gl.TRIANGLES, 36, gl.UNSIGNED_SHORT, 0);
+		gl.drawArrays(gl.TRIANGLES, 0, 36, gl.FLOAT, 0);
 	}
 	requestAnimationFrame(drawScene);
 }
