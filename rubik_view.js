@@ -1,5 +1,6 @@
 var canvas;
 var gl;
+var cvm;
 var horizAspect = 500.0/500.0;
 var cubeVerticesBuffer;
 var cubeIndicesBuffer;
@@ -11,7 +12,8 @@ var rectLoc = 0.0;
 var lastTime = 0; 
 var camera;
 
-function Camera(position, target) {
+function Camera(position, target) 
+{
 	this.position = $V(position);
 	this.target = $V(target);
 	this.xAngle = 0;
@@ -19,7 +21,8 @@ function Camera(position, target) {
 	this.transformMatrix = Matrix.I(4);
 	this.viewMatrix = Matrix.I(4);
 	
-	this.updateLookAt = function(p, t) {
+	this.updateLookAt = function(p, t) 
+	{
 		var cameraDirection = p.subtract(t).toUnitVector();
 		var up = $V([0.0, 1.0, 0.0]);
 		this.cameraRight = (up.cross(cameraDirection)).toUnitVector();
@@ -40,14 +43,16 @@ function Camera(position, target) {
 	
 	this.updateLookAt(this.position, this.target);
 	
-	this.rotateY = function(angle){
+	this.rotateY = function(angle)
+	{
 		this.position = $V(this.position).rotate(angle, Line.create([this.target.e(1), this.target.e(2), this.target.e(3)], 
 													[0, 1, 0]));
 		this.yAngle += angle;
 		this.updateLookAt(this.position, this.target);
 	}
 	
-	this.rotateX = function(angle){
+	this.rotateX = function(angle)
+	{
 		if(Math.abs(this.xAngle + angle) < Math.PI / 2){
 			// Only allow update if not going to cross y plane.
 			this.position = $V(this.position).rotate(angle, Line.create([this.target.e(1), this.target.e(2), this.target.e(3)], 
@@ -57,16 +62,24 @@ function Camera(position, target) {
 		}
 	}
 	
-	this.translate = function(direction){
+	this.translate = function(direction)
+	{
 		this.position = $V(this.position).add($V(direction));
 		this.target = $V(this.target).add($V(direction));
 		this.updateLookAt(this.position, this.target);
 	}
 }
 
-function CubeViewModel(dimension, cubeSize) {
+function CubeViewModel(dimension, cubeSize) 
+{
 	this.dimension = dimension;
 	this.cells = [];
+	
+	// Association matrix. Holds six arrays, one for each
+	//this.shared = Matrix.Zero(6, 6);
+	// Change Matrix values to empty arrays for easier use later.
+	this.shared = []
+	this.faces = [[], [], [], [], [], []]
 	
 	// Create shell of cubes.
 	for(var depth=0; depth < dimension; depth++){
@@ -81,6 +94,38 @@ function CubeViewModel(dimension, cubeSize) {
 				var y = y_idx * cubeSize - shift;
 				var z = depth * cubeSize - shift;
 				this.cells.push([x, y, z]);
+				
+				sideEnum = {
+					LEFT : 0,
+					RIGHT : 1,
+					TOP : 2,
+					BOTTOM : 3,
+					BACK : 4,
+					FRONT : 5
+				}
+				
+				var sharedSides = [];
+
+				if (x_idx == 0) { // Left face
+					sharedSides.push(sideEnum.LEFT);
+				} else if (x_idx == dimension - 1) { // Right face
+					sharedSides.push(sideEnum.RIGHT);
+				}
+				if (y_idx == 0) { // Top face
+					sharedSides.push(sideEnum.TOP);
+				} else if (y_idx == dimension - 1) { // Bottom face
+					sharedSides.push(sideEnum.BOTTOM);
+				}
+				if (depth == 0) { // Back face
+					sharedSides.push(sideEnum.BACK);
+				} else if (depth == dimension - 1){ // Front face
+					sharedSides.push(sideEnum.FRONT);
+				}
+				this.shared.push(sharedSides);
+				
+				for(var f=0; f < sharedSides.length; f++){
+					this.faces[sharedSides[f]].push((dimSquared)*depth+i);
+				}
 			}
 		}
  	}
@@ -89,7 +134,6 @@ function CubeViewModel(dimension, cubeSize) {
 	}
 }
 
-var cvm = new CubeViewModel(3, 2.02);
 start();
 
 //
@@ -98,10 +142,13 @@ start();
 // Called when the canvas is created to get the ball rolling.
 // Figuratively, that is. There's nothing moving in this demo.
 //
-function start() {
+function start() 
+{
   canvas = document.getElementById("glwindow");
 
   initWebGL(canvas);      // Initialize the GL context
+  
+  cvm = new CubeViewModel(3, 2.02);
   
   // Only continue if WebGL is available and working
 
@@ -115,7 +162,7 @@ function start() {
   initShaders();
   initBuffers();
   
-  camera = new Camera([0, 0, 0], [0, 0, -20]);
+  camera = new Camera([0, 0, 20], [0, 0, 0]);
   
   canvas.setAttribute("tabindex", 0); // So canvas can get focus.
   canvas.addEventListener( "keydown", keyDown, true);
@@ -123,7 +170,8 @@ function start() {
   window.requestAnimationFrame(drawScene);
 }
 
-function keyDown(event){
+function keyDown(event)
+{
 	var key = event.keyCode;
 	if(key == 68){ // d
 		camera.rotateY(Math.PI/32);
@@ -145,7 +193,8 @@ function keyDown(event){
 // Initialize WebGL, returning the GL context or null if
 // WebGL isn't available or could not be initialized.
 //
-function initWebGL() {
+function initWebGL() 
+{
   gl = null;
 
   try {
@@ -161,12 +210,14 @@ function initWebGL() {
   }
 }
 
-function resize() {
+function resize() 
+{
 	gl.viewport(0, 0, canvas.width, canvas.height);
 	horizAspect = canvas.height/canvas.width;
 }
 
-function initShaders() {
+function initShaders() 
+{
 	var fragmentShader = getShader(gl, 'shader-fs');
 	var vertexShader = getShader(gl, 'shader-vs');
 	
@@ -188,7 +239,8 @@ function initShaders() {
 	gl.enableVertexAttribArray(vertexColorAttribute);
 }
 
-function getShader(gl, id, type) {
+function getShader(gl, id, type) 
+{
 	var shaderScript, theSource, currentChild, shader;
 	
 	shaderScript = document.getElementById(id);
@@ -220,7 +272,8 @@ function getShader(gl, id, type) {
 	return shader;
 }
 
-function initBuffers() {
+function initBuffers() 
+{
 	cubeVerticesBuffer = gl.createBuffer();
 	gl.bindBuffer(gl.ARRAY_BUFFER, cubeVerticesBuffer);
 	
@@ -309,7 +362,8 @@ function initBuffers() {
 	gl.bufferData(gl.ARRAY_BUFFER, new Uint16Array(colors), gl.STATIC_DRAW);
 }
 
-function drawScene(time) {
+function drawScene(time) 
+{
 	// Passed as milliseconds, want seconds.
 	time *= 0.001;
 	var deltaTime = time - lastTime;
@@ -331,34 +385,40 @@ function drawScene(time) {
 	
 	for(var cellIdx=0; cellIdx < cvm.cells.length; cellIdx++){
 		loadIdentity();
-		mvTranslate([cvm.cells[cellIdx][0], cvm.cells[cellIdx][1], cvm.cells[cellIdx][2] - 20]);
+		mvTranslate([cvm.cells[cellIdx][0], cvm.cells[cellIdx][1], cvm.cells[cellIdx][2]]);
 		setMatrixUniforms();
 		gl.drawArrays(gl.TRIANGLES, 0, 36, gl.FLOAT, 0);
 	}
 	requestAnimationFrame(drawScene);
 }
 
-function loadIdentity() {
+function loadIdentity() 
+{
 	mvMatrix = Matrix.I(4);
 }
 
-function multMatrix(m) {
+function multMatrix(m) 
+{
 	mvMatrix = mvMatrix.x(m);
 }
 
-function mvTranslate(v) {
+function mvTranslate(v) 
+{
 	multMatrix(Matrix.Translation($V([v[0], v[1], v[2]])).ensure4x4());
 }
 
-function mvRotate(t) {
+function mvRotate(t) 
+{
 	multMatrix(Matrix.RotationY(t).ensure4x4());
 }
 
-function mvScale(s) {
+function mvScale(s) 
+{
 	multMatrix(Matrix.I(4).x(s));
 }
 
-function setMatrixUniforms() {
+function setMatrixUniforms() 
+{
 	var pUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
 	gl.uniformMatrix4fv(pUniform, false, new Float32Array(perspectiveMatrix.flatten()));
 
