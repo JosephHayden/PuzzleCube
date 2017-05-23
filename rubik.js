@@ -52,69 +52,7 @@ function Cube(dimension)
 		
 		with each cell in row-major format.
 	*/
-	this.border = [[],[],[],[],[],[]];
-	// Face 0
-	var border_faces = [1, 2, 3];
-	for(var faceIdx = 0; faceIdx < border_faces.length; faceIdx++){
-		for(var idx = 0; idx < this.dimension; idx++){
-			this.border[0].push([border_faces[faceIdx], idx]);
-		}
-	}
-	for(var idx = 0; idx < this.dimension; idx++){
-		this.border[0].push([5, this.dimension*this.dimension - 1 - idx]);
-	}
-	// Face 1
-	border_faces = [0, 2, 3, 4];
-	for(var faceIdx = 0; faceIdx < border_faces.length; faceIdx++){
-		for(var idx = 0; idx < this.dimension; idx++){
-			this.border[1].push([border_faces[faceIdx], idx*this.dimension]);
-		}
-	}
-	// Face 2
-	border_faces = [1, 0, 3, 4];
-	for(var idx = 0; idx < this.dimension; idx++){
-		this.border[2].push([1, (this.dimension*this.dimension) - ((this.dimension) + idx*(this.dimension)) + (this.dimension-1)]);
-	}
-	for(var idx = 0; idx < this.dimension; idx++){
-		this.border[2].push([0, (this.dimension)*(this.dimension - 1) + idx]);
-	}
-	for(var idx = 0; idx < this.dimension; idx++){
-		this.border[2].push([3, idx*(this.dimension)]);
-	}
-	for(var idx = 0; idx < this.dimension; idx++){
-		this.border[2].push([4, this.dimension - idx - 1]);
-	}
-	// Face 3
-	border_faces = [5, 4, 2, 0];
-	for(var faceIdx = 0; faceIdx < border_faces.length; faceIdx++){
-		for(var idx = 0; idx < this.dimension; idx++){
-			this.border[3].push([border_faces[faceIdx], (this.dimension*this.dimension)- 1 - idx]);
-		}
-	}
-	// Face 4
-	border_faces = [1, 2, 3];
-	for(var faceIdx = 0; faceIdx < border_faces.length; faceIdx++){
-		for(var idx = 0; idx < this.dimension; idx++){
-			this.border[4].push([border_faces[faceIdx], (this.dimension)*(this.dimension - 1) + idx]);
-		}
-	}
-	for(var idx = 0; idx < this.dimension; idx++){
-		this.border[4].push([5, this.dimension - 1 - idx]);
-	}
-	// Face 5
-	border_faces = [3, 5, 0, 1];
-	for(var idx = 0; idx < this.dimension; idx++){
-		this.border[5].push([3, (this.dimension)*(this.dimension - 1) + idx]);
-	}
-	for(var idx = 0; idx < this.dimension; idx++){
-		this.border[5].push([5, (this.dimension)*(this.dimension - 1) + idx]);
-	}
-	for(var idx = 0; idx < this.dimension; idx++){
-		this.border[5].push([0, (this.dimension - 1) - idx]);
-	}
-	for(var idx = 0; idx < this.dimension; idx++){
-		this.border[5].push([1, idx*this.dimension]);
-	}
+	this.border = initBorderArray(this.dimension);
 	
 	var check_border = [
 	[[1, 0], [1, 1], [2, 0], [2, 1], [3, 0], [3, 1], [5, 3], [5, 2]], // Face 0
@@ -187,6 +125,74 @@ function Cube(dimension)
 	}
 }
 
+function initBorderArray(dimension){
+	border = [[],[],[],[],[],[]];
+	// Face 0
+	var border_faces = [1, 2, 3];
+	for(var faceIdx = 0; faceIdx < border_faces.length; faceIdx++){
+		for(var idx = 0; idx < dimension; idx++){
+			border[0].push([border_faces[border_faces.length - 1 - faceIdx], dimension - 1 - idx]);
+		}
+	}
+	for(var idx = 0; idx < dimension; idx++){
+		border[0].push([5, dimension*dimension - 1 - (dimension - 1 - idx)]);
+	}
+	// Face 1
+	border_faces = [0, 2, 4, 5];
+	for(var faceIdx = 0; faceIdx < border_faces.length; faceIdx++){
+		for(var idx = 0; idx < dimension; idx++){
+			border[1].push([border_faces[faceIdx], idx*dimension]);
+		}
+	}
+
+	// Face 2
+	border_faces = [1, 0, 3, 4];
+	for(var idx = 0; idx < dimension; idx++){
+		border[2].push([1, (dimension*dimension) - ((dimension) + idx*(dimension)) + (dimension-1)]);
+	}
+	for(var idx = 0; idx < dimension; idx++){
+		border[2].push([0, (dimension)*(dimension - 1) + idx]);
+	}
+	for(var idx = 0; idx < dimension; idx++){
+		border[2].push([3, idx*(dimension)]);
+	}
+	for(var idx = 0; idx < dimension; idx++){
+		border[2].push([4, dimension - idx - 1]);
+	}
+	// Face 3
+	border_faces = [5, 4, 2, 0];
+	for(var faceIdx = 0; faceIdx < border_faces.length; faceIdx++){
+		for(var idx = 0; idx < dimension; idx++){
+			border[3].push([border_faces[faceIdx], (dimension*dimension)- 1 - (idx*dimension)]);
+		}
+	}
+	// Face 4
+	border_faces = [1, 2, 3];
+	for(var faceIdx = 0; faceIdx < border_faces.length; faceIdx++){
+		for(var idx = 0; idx < dimension; idx++){
+			border[4].push([border_faces[faceIdx], (dimension)*(dimension - 1) + idx]);
+		}
+	}
+	for(var idx = 0; idx < dimension; idx++){
+		border[4].push([5, dimension - 1 - idx]);
+	}
+	// Face 5
+	border_faces = [3, 4, 0, 1];
+	for(var idx = 0; idx < dimension; idx++){
+		border[5].push([border_faces[1], (dimension)*(dimension - 1) + idx]);
+	}
+	for(var idx = 0; idx < dimension; idx++){
+		border[5].push([border_faces[0], (dimension*dimension)- 1 - (idx*dimension)]);
+	}
+	for(var idx = 0; idx < dimension; idx++){
+		border[5].push([border_faces[2], (dimension - 1) - idx]);
+	}
+	for(var idx = 0; idx < dimension; idx++){
+		border[5].push([border_faces[3], idx*dimension]);
+	}
+	return border;
+}
+
 function wrap_shift_ref(array, cube)
 {
 	if(array.length > 1){
@@ -196,12 +202,4 @@ function wrap_shift_ref(array, cube)
 		}
 		cube.set_cell_ref(array[0][0], array[0][1], end);
 	}
-}
-
-function main()
-{
-	c = new Cube(2);
-	c.set_cell_ref(2, 0, 'x');
-	c.rotate(0);
-	c.print();
 }
