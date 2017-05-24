@@ -3,11 +3,18 @@ var gl;
 var cvm;
 var horizAspect = 500.0/500.0;
 var cubeVerticesBuffer;
+var overlayCubeVerticesBuffer;
 var cubeIndicesBuffer;
 var cubeColorBuffer;
+var cubeVerticesTextureCoordBuffer;
 var vertexPositionAttribute;
 var vertexColorAttribute;
+var textureCoordAttribute;
 var shaderProgram;
+var overlayShaderProgram;
+var overlayTexture;
+var textureLoaded = false;
+var overlayImage;
 var rectLoc = 0.0;
 var lastTime = 0; 
 var camera;
@@ -223,7 +230,7 @@ function CubeViewModel(cubeSize, cube)
 			// Because we're using row-major format, multiply T*R.
 			mvTranslate([this.cell_positions[cellIdx][0], this.cell_positions[cellIdx][1], this.cell_positions[cellIdx][2]]);
 			mvRotate([this.cell_rotations[cellIdx][0], this.cell_rotations[cellIdx][1], this.cell_rotations[cellIdx][2]]);
-			setMatrixUniforms();
+			setMatrixUniforms(shaderProgram);
 			gl.drawArrays(gl.TRIANGLES, 0, 36, gl.FLOAT, 0);
 		}
 	}
@@ -242,7 +249,7 @@ function CubeViewModel(cubeSize, cube)
 			 mvRotate([this.cell_rotations[this.face[sliceIdx][cellIdx]][0], 
 					  this.cell_rotations[this.face[sliceIdx][cellIdx]][1], 
 					  this.cell_rotations[this.face[sliceIdx][cellIdx]][2]]);
-			setMatrixUniforms();
+			setMatrixUniforms(shaderProgram);
 			gl.drawArrays(gl.TRIANGLES, 0, 36, gl.FLOAT, 0);
 		}
 	}
@@ -256,7 +263,7 @@ function CubeViewModel(cubeSize, cube)
 		loadIdentity();
 		mvTranslate([this.cell_positions[cellIdx][0], this.cell_positions[cellIdx][1], this.cell_positions[cellIdx][2]]);
 		mvRotate([this.cell_rotations[cellIdx][0], this.cell_rotations[cellIdx][1], this.cell_rotations[cellIdx][2]]);
-		setMatrixUniforms();
+		setMatrixUniforms(shaderProgram);
 		gl.drawArrays(gl.TRIANGLES, 0, 36, gl.FLOAT, 0);
 	}
 	
@@ -334,11 +341,14 @@ function start(cube)
     gl.clearColor(0.0, 0.0, 0.0, 1.0);  // Set clear color to black, fully opaque
     gl.clearDepth(1.0);                 // Clear everything
     gl.enable(gl.DEPTH_TEST);           // Enable depth testing
+	gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+	gl.enable(gl.BLEND);
     gl.depthFunc(gl.LEQUAL);            // Near things obscure far things
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   }
   initShaders();
   initBuffers();
+  initTextures();
   
   camera = new Camera([0, 0, 20], [0, 0, 0]);
   
@@ -426,6 +436,10 @@ function initShaders()
 	var fragmentShader = getShader(gl, 'shader-fs');
 	var vertexShader = getShader(gl, 'shader-vs');
 	
+	var overlayFragmentShader = getShader(gl, 'overlay-shader-fs');
+	var overlayVertexShader = getShader(gl, 'overlay-shader-vs');
+	
+	// Shader for the cubes.
 	shaderProgram = gl.createProgram();
 	gl.attachShader(shaderProgram, vertexShader);
 	gl.attachShader(shaderProgram, fragmentShader);
@@ -442,6 +456,25 @@ function initShaders()
 	
 	vertexColorAttribute = gl.getAttribLocation(shaderProgram, 'vertexColor');
 	gl.enableVertexAttribArray(vertexColorAttribute);
+	
+	// Overlay shader (with texture).
+	overlayShaderProgram = gl.createProgram();
+	gl.attachShader(overlayShaderProgram, overlayVertexShader);
+	gl.attachShader(overlayShaderProgram, overlayFragmentShader);
+	gl.linkProgram(overlayShaderProgram);
+	
+	if (!gl.getProgramParameter(overlayShaderProgram, gl.LINK_STATUS)) {
+		console.log('Unable to initialize the shader program: ' + gl.getProgramInfoLog(overlayShaderProgram));
+	}
+	
+	gl.useProgram(overlayShaderProgram);
+	
+	vertexPositionAttribute = gl.getAttribLocation(overlayShaderProgram, 'aVertexPosition');
+	gl.enableVertexAttribArray(vertexPositionAttribute);
+	
+	textureCoordAttribute = gl.getAttribLocation(overlayShaderProgram, 'aTextureCoord');
+	gl.enableVertexAttribArray(textureCoordAttribute);
+	gl.vertexAttribPointer(textureCoordAttribute, 2, gl.FLOAT, false, 0, 0);
 }
 
 function getShader(gl, id, type) 
@@ -479,49 +512,74 @@ function getShader(gl, id, type)
 
 function initBuffers() 
 {
+	overlayCubeVerticesBuffer = gl.createBuffer();
+	gl.bindBuffer(gl.ARRAY_BUFFER, overlayCubeVerticesBuffer);
+	
+	var vertices = [
+	  // Front face
+	  -1.0, -1.0,  1.0,
+	   1.0, -1.0,  1.0,
+	   1.0,  1.0,  1.0,
+	  -1.0,  1.0,  1.0,
+	  
+	  // Back face
+	  -1.0, -1.0, -1.0,
+	  -1.0,  1.0, -1.0,
+	   1.0,  1.0, -1.0,
+	   1.0, -1.0, -1.0,
+	  
+	  // Top face
+	  -1.0,  1.0, -1.0,
+	  -1.0,  1.0,  1.0,
+	   1.0,  1.0,  1.0,
+	   1.0,  1.0, -1.0,
+	  
+	  // Bottom face
+	  -1.0, -1.0, -1.0,
+	   1.0, -1.0, -1.0,
+	   1.0, -1.0,  1.0,
+	  -1.0, -1.0,  1.0,
+	  
+	  // Right face
+	   1.0, -1.0, -1.0,
+	   1.0,  1.0, -1.0,
+	   1.0,  1.0,  1.0,
+	   1.0, -1.0,  1.0,
+	  
+	  // Left face
+	  -1.0, -1.0, -1.0,
+	  -1.0, -1.0,  1.0,
+	  -1.0,  1.0,  1.0,
+	  -1.0,  1.0, -1.0
+	];
+	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+
+	
+	var indices = [
+	  0,  1,  2,      0,  2,  3,    // front
+	  4,  5,  6,      4,  6,  7,    // back
+	  8,  9,  10,     8,  10, 11,   // top
+	  12, 13, 14,     12, 14, 15,   // bottom
+	  16, 17, 18,     16, 18, 19,   // right
+	  20, 21, 22,     20, 22, 23    // left
+	];
+	
+	cubeIndicesBuffer = gl.createBuffer();
+	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeIndicesBuffer);
+	gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+	
 	cubeVerticesBuffer = gl.createBuffer();
 	gl.bindBuffer(gl.ARRAY_BUFFER, cubeVerticesBuffer);
 	
-	var vertices = [
-		1.0, 1.0, 1.0,
-		-1.0, 1.0, 1.0,
-		1.0, -1.0, 1.0,
-		-1.0, -1.0, 1.0,
-		1.0, 1.0, -1.0,
-		-1.0, 1.0, -1.0,
-		1.0, -1.0, -1.0,
-		-1.0, -1.0, -1.0,
-	];
-		
-	/*
-	cubeIndicesBuffer = gl.createBuffer();
-	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeIndicesBuffer);*/
-	
-	var indices = [
-		0, 1, 2, 
-		1, 3, 2, // Front
-		6, 5, 4,
-		6, 7, 5, // Back
-		6, 4, 0,
-		2, 6, 0, // Right
-		1, 5, 7,
-		7, 1, 3, // Left
-		0, 4, 5,
-		0, 5, 1, // Top
-		2, 3, 7,
-		2, 7, 6, // Bottom
-	];
-	
 	var dupe_vertices = [];
 	
+	// Creates array of 32 vertices, so each triangle has its own verts.
 	for(var i=0; i < indices.length; i++){
 		var x = vertices.slice(indices[i]*3, indices[i]*3+3);
 		dupe_vertices = dupe_vertices.concat(x);
 	}
 	
 	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(dupe_vertices), gl.STATIC_DRAW);
-	
-	//gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
 	
 	cubeColorBuffer = gl.createBuffer();
 	gl.bindBuffer(gl.ARRAY_BUFFER, cubeColorBuffer);
@@ -565,6 +623,44 @@ function initBuffers()
 		1, 0.5, 0 // Face 6
 	];
 	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+	
+	cubeVerticesTextureCoordBuffer = gl.createBuffer();
+	gl.bindBuffer(gl.ARRAY_BUFFER, cubeVerticesTextureCoordBuffer);
+	
+	var textureCoordinates = [
+    // Front
+    0.0,  1.0,
+    0.33,  1.0,
+    0.33,  0.5,
+    0.0,  0.5,
+    // Back
+    0.99,  1.0,
+    0.99,  0.5,
+	0.66,  0.5,
+	0.66,  1.0,
+    // Top
+	0.33,  0.5,
+    0.33,  1.0,
+	0.66,  1.0,
+    0.66,  0.5,
+    // Bottom
+    0.33,  0.5,
+	0.66,  0.5,
+	0.66,  0.0,
+    0.33,  0.0,
+    // Right
+	0.99,  0.5,
+    0.99,  0.0,
+    0.66,  0.0,
+	0.66,  0.5,
+    // Left
+	0.0,  0.5,
+    0.33,  0.5,
+    0.33,  0.0,
+	0.0,  0.0
+	];
+	
+	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoordinates), gl.STATIC_DRAW);
 }
 
 function drawScene(time) 
@@ -576,6 +672,8 @@ function drawScene(time)
 
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 	perspectiveMatrix = makePerspective(45, horizAspect, 0.1, 100.0);
+	
+	gl.useProgram(shaderProgram);
 	
 	var colorUniform = gl.getUniformLocation(shaderProgram, "color");
 	gl.uniform3fv(colorUniform, [0.0, 0.0, 255]);
@@ -590,9 +688,42 @@ function drawScene(time)
 	
 	//cvm.drawCell(9);
 	cvm.drawFull();
-	//cvm.drawSlice(1);
+	//cvm.drawSlice(5);
+	
+	gl.useProgram(overlayShaderProgram);
+	// Only want to draw the overlay if the texture is loaded (since the texture is all we're using it for).
+	if(textureLoaded){
+		drawOverlay();
+	}
 
 	requestAnimationFrame(drawScene);
+}
+
+function drawOverlay(){
+	loadIdentity();
+	
+	//mvTranslate([3.0, 3.0, 3.0]);
+	//mvScale(1);
+	console.log(mvMatrix);
+	
+	var scaleUniform = gl.getUniformLocation(overlayShaderProgram, "uScaleMatrix");
+	gl.uniformMatrix4fv(scaleUniform, false, new Float32Array($M([[3.5, 0, 0, 0], [0, 3.5, 0, 0], [0, 0, 3.5, 0], [0, 0, 0, 1]]).flatten()));
+	
+	gl.enableVertexAttribArray(vertexPositionAttribute);
+	gl.bindBuffer(gl.ARRAY_BUFFER, overlayCubeVerticesBuffer);
+	gl.vertexAttribPointer(vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0);
+		
+	//gl.enableVertexAttribArray(textureCoordAttribute);
+	gl.bindBuffer(gl.ARRAY_BUFFER, cubeVerticesTextureCoordBuffer);
+    gl.vertexAttribPointer(textureCoordAttribute, 2, gl.FLOAT, false, 0, 0);
+	
+	gl.activeTexture(gl.TEXTURE0);
+	gl.bindTexture(gl.TEXTURE_2D, overlayTexture);
+	gl.uniform1i(gl.getUniformLocation(overlayShaderProgram, 'uSampler'), 0);
+	
+	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeIndicesBuffer);
+	setMatrixUniforms(overlayShaderProgram);
+	gl.drawElements(gl.TRIANGLES, 36, gl.UNSIGNED_SHORT, 0);
 }
 
 function loadIdentity() 
@@ -612,6 +743,12 @@ function mvTranslate(v)
 
 function mvRotate(t) 
 {
+	/*
+	multMatrix(Matrix.RotationY(t[1]).ensure4x4());
+	multMatrix(Matrix.RotationZ(t[2]).ensure4x4());
+	multMatrix(Matrix.RotationX(t[0]).ensure4x4());
+	*/
+	
 	multMatrix(Matrix.RotationY(t[1]).ensure4x4());
 	multMatrix(Matrix.RotationZ(t[2]).ensure4x4());
 	multMatrix(Matrix.RotationX(t[0]).ensure4x4());
@@ -659,15 +796,15 @@ function mvScale(s)
 	multMatrix(Matrix.I(4).x(s));
 }
 
-function setMatrixUniforms() 
+function setMatrixUniforms(program) 
 {
-	var pUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
+	var pUniform = gl.getUniformLocation(program, "uPMatrix");
 	gl.uniformMatrix4fv(pUniform, false, new Float32Array(perspectiveMatrix.flatten()));
 
-	var mvUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
+	var mvUniform = gl.getUniformLocation(program, "uMVMatrix");
 	gl.uniformMatrix4fv(mvUniform, false, new Float32Array(mvMatrix.flatten()));
 	
-	var viewUniform = gl.getUniformLocation(shaderProgram, "uViewMatrix");
+	var viewUniform = gl.getUniformLocation(program, "uViewMatrix");
 	gl.uniformMatrix4fv(viewUniform, false, new Float32Array(camera.lookAt.flatten()));
 }
 
@@ -704,3 +841,20 @@ function rotateArrayAntiCW(array, dimension){
 String.prototype.paddingLeft = function (paddingValue) {
    return String(paddingValue + this).slice(-paddingValue.length);
 };
+
+function initTextures() {
+  overlayTexture = gl.createTexture();
+  overlayImage = new Image();
+  overlayImage.onload = function() { handleTextureLoaded(overlayImage, overlayTexture); }
+  overlayImage.src = 'overlay_texture.png';
+}
+
+function handleTextureLoaded(image, texture) {
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
+  gl.generateMipmap(gl.TEXTURE_2D);
+  gl.bindTexture(gl.TEXTURE_2D, null);
+  textureLoaded = true;
+}
