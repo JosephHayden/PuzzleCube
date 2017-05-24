@@ -71,10 +71,10 @@ function Camera(position, target)
 	}
 }
 
-function CubeViewModel(dimension, cubeSize, cube) 
+function CubeViewModel(cubeSize, cube) 
 {
 	this.cube = cube;
-	this.dimension = dimension;
+	this.dimension = cube.dimension;
 	this.cell_positions = [];
 	this.cell_rotations = [];
 	this.face_normals = [
@@ -95,15 +95,15 @@ function CubeViewModel(dimension, cubeSize, cube)
 	// complications that arise from skipping inner cell_positions.
 	var cellIdx = 0;
 	// Create shell of cubes.
-	for(var depth=0; depth < dimension; depth++)
+	for(var depth=0; depth < this.dimension; depth++)
 	{
-		var dimSquared = dimension*dimension;
-		var shift = (dimension - 1)*cubeSize / 2.0;
+		var dimSquared = this.dimension*this.dimension;
+		var shift = (this.dimension - 1)*cubeSize / 2.0;
 		for(var i=0; i < dimSquared; i++){
-			var x_idx = i % dimension;
-			var y_idx = Math.floor(i / dimension);
+			var x_idx = i % this.dimension;
+			var y_idx = Math.floor(i / this.dimension);
 			// Only want to add outermost cubes, to get shell.
-			if(x_idx == 0 || x_idx == dimension-1 || y_idx == 0 || y_idx == dimension-1 || depth == 0 || depth == dimension-1){
+			if(x_idx == 0 || x_idx == this.dimension-1 || y_idx == 0 || y_idx == this.dimension-1 || depth == 0 || depth == this.dimension-1){
 				var x = x_idx * cubeSize - shift;
 				var y = y_idx * cubeSize - shift;
 				var z = depth * cubeSize - shift;
@@ -123,17 +123,17 @@ function CubeViewModel(dimension, cubeSize, cube)
 
 				if (x_idx == 0) { // Left face
 					sharedSides.push(sideEnum.LEFT);
-				} else if (x_idx == dimension - 1) { // Right face
+				} else if (x_idx == this.dimension - 1) { // Right face
 					sharedSides.push(sideEnum.RIGHT);
 				}
 				if (y_idx == 0) { // Bottom face
 					sharedSides.push(sideEnum.BOTTOM);
-				} else if (y_idx == dimension - 1) { // Top face
+				} else if (y_idx == this.dimension - 1) { // Top face
 					sharedSides.push(sideEnum.TOP);
 				}
 				if (depth == 0) { // Back face
 					sharedSides.push(sideEnum.BACK);
-				} else if (depth == dimension - 1){ // Front face
+				} else if (depth == this.dimension - 1){ // Front face
 					sharedSides.push(sideEnum.FRONT);
 				}
 				
@@ -190,9 +190,10 @@ function CubeViewModel(dimension, cubeSize, cube)
 			this.cell_positions[this.face[faceIdx][i]][0] = rotVec.e(1);
 			this.cell_positions[this.face[faceIdx][i]][1] = rotVec.e(2);
 			this.cell_positions[this.face[faceIdx][i]][2] = rotVec.e(3);
-			this.cell_rotations[this.face[faceIdx][i]][0] += this.face_normals[faceIdx][0]*angle;
-			this.cell_rotations[this.face[faceIdx][i]][1] += this.face_normals[faceIdx][1]*angle;
-			this.cell_rotations[this.face[faceIdx][i]][2] += this.face_normals[faceIdx][2]*angle;
+			this.cell_rotations[this.face[faceIdx][i]][0] += this.face_normals[faceIdx][0]*-angle;
+			this.cell_rotations[this.face[faceIdx][i]][1] += this.face_normals[faceIdx][1]*-angle;
+			this.cell_rotations[this.face[faceIdx][i]][2] += this.face_normals[faceIdx][2]*-angle;
+			// Cap rotation angle at 2 rad.
 			if(Math.abs(this.cell_rotations[this.face[faceIdx][i]][0]) >= 2*Math.PI) {
 				this.cell_rotations[this.face[faceIdx][i]][0] = 0;
 			}
@@ -219,6 +220,7 @@ function CubeViewModel(dimension, cubeSize, cube)
 	this.drawFull = function(){
 		for(var cellIdx=0; cellIdx < this.cell_positions.length; cellIdx++){
 			loadIdentity();
+			// Because we're using row-major format, multiply T*R.
 			mvTranslate([this.cell_positions[cellIdx][0], this.cell_positions[cellIdx][1], this.cell_positions[cellIdx][2]]);
 			mvRotate([this.cell_rotations[cellIdx][0], this.cell_rotations[cellIdx][1], this.cell_rotations[cellIdx][2]]);
 			setMatrixUniforms();
@@ -234,8 +236,12 @@ function CubeViewModel(dimension, cubeSize, cube)
 	this.drawSlice = function(sliceIdx){
 		for(var cellIdx=0; cellIdx < this.face[sliceIdx].length; cellIdx++){
 			loadIdentity();
-			mvTranslate([this.cell_positions[this.face[sliceIdx][cellIdx]][0], this.cell_positions[cvm.face[sliceIdx][cellIdx]][1], this.cell_positions[this.face[sliceIdx][cellIdx]][2]]);
-			mvRotate([this.cell_rotations[this.face[sliceIdx][cellIdx]][0], this.cell_rotations[this.face[sliceIdx][cellIdx]][1], this.cell_rotations[this.face[sliceIdx][cellIdx]][2]]);
+			mvTranslate([this.cell_positions[this.face[sliceIdx][cellIdx]][0], 
+						 this.cell_positions[this.face[sliceIdx][cellIdx]][1], 
+						 this.cell_positions[this.face[sliceIdx][cellIdx]][2]]);
+			 mvRotate([this.cell_rotations[this.face[sliceIdx][cellIdx]][0], 
+					  this.cell_rotations[this.face[sliceIdx][cellIdx]][1], 
+					  this.cell_rotations[this.face[sliceIdx][cellIdx]][2]]);
 			setMatrixUniforms();
 			gl.drawArrays(gl.TRIANGLES, 0, 36, gl.FLOAT, 0);
 		}
@@ -320,7 +326,7 @@ function start(cube)
 
   initWebGL(canvas);      // Initialize the GL context
   
-  cvm = new CubeViewModel(3, 2.02, cube);
+  cvm = new CubeViewModel(2.02, cube);
   
   // Only continue if WebGL is available and working
 
@@ -359,28 +365,29 @@ function keyDown(event)
 	if(key == 87){ // w
 		camera.rotateX(-Math.PI/32);
 	}
+	var angle = Math.PI/2
 	if(key == 49) { // 1
-		cvm.rotate(1, Math.PI/2);
+		cvm.rotate(1, angle);
 		cvm.print();
 	}
 	if(key == 50) { // 2
-		cvm.rotate(2, Math.PI/2);
+		cvm.rotate(2, angle);
 		cvm.print();
 	}
 	if(key == 51) { // 3
-		cvm.rotate(3, Math.PI/2);
+		cvm.rotate(3, angle);
 		cvm.print();
 	}
 	if(key == 52) { // 4
-		cvm.rotate(4, Math.PI/2);
+		cvm.rotate(4, angle);
 		cvm.print();
 	}
 	if(key == 53) { // 5
-		cvm.rotate(5, Math.PI/2);
+		cvm.rotate(5, angle);
 		cvm.print();
 	}
 	if(key == 54) { // 6
-		cvm.rotate(0, Math.PI/2);
+		cvm.rotate(0, angle);
 		cvm.print();
 	}
 }
@@ -581,7 +588,9 @@ function drawScene(time)
 	gl.bindBuffer(gl.ARRAY_BUFFER, cubeColorBuffer);
 	gl.vertexAttribPointer(vertexColorAttribute, 3, gl.FLOAT, false, 0, 0);
 	
+	//cvm.drawCell(9);
 	cvm.drawFull();
+	//cvm.drawSlice(1);
 
 	requestAnimationFrame(drawScene);
 }
@@ -603,9 +612,9 @@ function mvTranslate(v)
 
 function mvRotate(t) 
 {
-	multMatrix(Matrix.RotationX(t[0]).ensure4x4());
 	multMatrix(Matrix.RotationY(t[1]).ensure4x4());
 	multMatrix(Matrix.RotationZ(t[2]).ensure4x4());
+	multMatrix(Matrix.RotationX(t[0]).ensure4x4());
 }
 
 /* 
