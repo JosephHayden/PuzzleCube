@@ -84,6 +84,8 @@ function CubeViewModel(cubeSize, cube)
 	this.dimension = cube.dimension;
 	this.cell_positions = [];
 	this.cell_rotations = [];
+	var q = new Quaternion();
+	
 	this.face_normals = [
 		[ 0, 0, 1 ],
 		[ 1, 0, 0 ],
@@ -115,7 +117,9 @@ function CubeViewModel(cubeSize, cube)
 				var y = y_idx * cubeSize - shift;
 				var z = depth * cubeSize - shift;
 				this.cell_positions.push([x, y, z]);
-				this.cell_rotations.push([0, 0, 0]);
+				//this.cell_rotations.push(Quaternion.fromEuler(1, 0, 0));
+				var quat = Quaternion.fromAxisAngle([0, 0, 1], 0);
+				this.cell_rotations.push(quat);
 
 				sideEnum = {
 					LEFT : 1,
@@ -193,31 +197,21 @@ function CubeViewModel(cubeSize, cube)
 		for(var i=0; i < this.face[faceIdx].length; i++){
 			// Rotating around center point.
 			var rotVec = $V(this.cell_positions[this.face[faceIdx][i]]).rotate(-angle, Line.create([0, 0, 0], this.face_normals[faceIdx]));
-			//console.log("Before: " + this.cell_positions[this.face[faceIdx][i]]);
 			this.cell_positions[this.face[faceIdx][i]][0] = rotVec.e(1);
 			this.cell_positions[this.face[faceIdx][i]][1] = rotVec.e(2);
 			this.cell_positions[this.face[faceIdx][i]][2] = rotVec.e(3);
-			this.cell_rotations[this.face[faceIdx][i]][0] += this.face_normals[faceIdx][0]*-angle;
-			this.cell_rotations[this.face[faceIdx][i]][1] += this.face_normals[faceIdx][1]*-angle;
-			this.cell_rotations[this.face[faceIdx][i]][2] += this.face_normals[faceIdx][2]*-angle;
-			// Cap rotation angle at 2 rad.
-			if(Math.abs(this.cell_rotations[this.face[faceIdx][i]][0]) >= 2*Math.PI) {
-				this.cell_rotations[this.face[faceIdx][i]][0] = 0;
-			}
-			if(Math.abs(this.cell_rotations[this.face[faceIdx][i]][1]) >= 2*Math.PI) {
-				this.cell_rotations[this.face[faceIdx][i]][1] = 0;
-			}
-			if(Math.abs(this.cell_rotations[this.face[faceIdx][i]][2]) >= 2*Math.PI) {
-				this.cell_rotations[this.face[faceIdx][i]][2] = 0;
-			}
+			var q1 = this.cell_rotations[this.face[faceIdx][i]]; // Quaternion for current cell.
+			// Quaternion for current rotation axis.
+			var q2 = Quaternion.fromAxisAngle(this.face_normals[faceIdx], -angle);
+			// Result of rotating cell quaternion around rotation axis.
+			var q3 = q2.mul(q1);
+			this.cell_rotations[this.face[faceIdx][i]] = q3;
 		}
 		this.face[faceIdx] = rotateArrayCW(this.face[faceIdx], this.dimension);
 
 		for(var i = 0; i < this.dimension; i++){
 			wrap_shift_view_ref(this.border[faceIdx], this);
 		}
-		
-		console.log(cvm.face[0]);
 	}
 	
 	/*
@@ -229,7 +223,7 @@ function CubeViewModel(cubeSize, cube)
 			loadIdentity();
 			// Because we're using row-major format, multiply T*R.
 			mvTranslate([this.cell_positions[cellIdx][0], this.cell_positions[cellIdx][1], this.cell_positions[cellIdx][2]]);
-			mvRotate([this.cell_rotations[cellIdx][0], this.cell_rotations[cellIdx][1], this.cell_rotations[cellIdx][2]]);
+			mvRotate(this.cell_rotations[cellIdx]);
 			setMatrixUniforms(shaderProgram);
 			gl.drawArrays(gl.TRIANGLES, 0, 36, gl.FLOAT, 0);
 		}
@@ -246,9 +240,7 @@ function CubeViewModel(cubeSize, cube)
 			mvTranslate([this.cell_positions[this.face[sliceIdx][cellIdx]][0], 
 						 this.cell_positions[this.face[sliceIdx][cellIdx]][1], 
 						 this.cell_positions[this.face[sliceIdx][cellIdx]][2]]);
-			 mvRotate([this.cell_rotations[this.face[sliceIdx][cellIdx]][0], 
-					  this.cell_rotations[this.face[sliceIdx][cellIdx]][1], 
-					  this.cell_rotations[this.face[sliceIdx][cellIdx]][2]]);
+			mvRotate(this.cell_rotations[this.face[sliceIdx][cellIdx]]);
 			setMatrixUniforms(shaderProgram);
 			gl.drawArrays(gl.TRIANGLES, 0, 36, gl.FLOAT, 0);
 		}
@@ -262,7 +254,8 @@ function CubeViewModel(cubeSize, cube)
 	this.drawCell = function(cellIdx){
 		loadIdentity();
 		mvTranslate([this.cell_positions[cellIdx][0], this.cell_positions[cellIdx][1], this.cell_positions[cellIdx][2]]);
-		mvRotate([this.cell_rotations[cellIdx][0], this.cell_rotations[cellIdx][1], this.cell_rotations[cellIdx][2]]);
+		mvRotate(this.cell_rotations[cellIdx]);
+		console.log("ROTATION: " + this.cell_rotations[cellIdx].toEuler());
 		setMatrixUniforms(shaderProgram);
 		gl.drawArrays(gl.TRIANGLES, 0, 36, gl.FLOAT, 0);
 	}
@@ -321,7 +314,6 @@ function wrap_shift_view_ref_rev(array, cubeViewModel)
 		}
 		cubeViewModel.set_cell_ref(array[array.length - 1][0], array[array.length - 1][1], front);
 	}
-	console.log(array);
 }
 
 /*
@@ -378,27 +370,21 @@ function keyDown(event)
 	var angle = Math.PI/2
 	if(key == 49) { // 1
 		cvm.rotate(1, angle);
-		cvm.print();
 	}
 	if(key == 50) { // 2
 		cvm.rotate(2, angle);
-		cvm.print();
 	}
 	if(key == 51) { // 3
 		cvm.rotate(3, angle);
-		cvm.print();
 	}
 	if(key == 52) { // 4
 		cvm.rotate(4, angle);
-		cvm.print();
 	}
 	if(key == 53) { // 5
 		cvm.rotate(5, angle);
-		cvm.print();
 	}
 	if(key == 54) { // 6
 		cvm.rotate(0, angle);
-		cvm.print();
 	}
 }
 
@@ -686,7 +672,7 @@ function drawScene(time)
 	gl.bindBuffer(gl.ARRAY_BUFFER, cubeColorBuffer);
 	gl.vertexAttribPointer(vertexColorAttribute, 3, gl.FLOAT, false, 0, 0);
 	
-	//cvm.drawCell(9);
+	//cvm.drawCell(17);
 	cvm.drawFull();
 	//cvm.drawSlice(5);
 	
@@ -701,10 +687,6 @@ function drawScene(time)
 
 function drawOverlay(){
 	loadIdentity();
-	
-	//mvTranslate([3.0, 3.0, 3.0]);
-	//mvScale(1);
-	console.log(mvMatrix);
 	
 	var scaleUniform = gl.getUniformLocation(overlayShaderProgram, "uScaleMatrix");
 	gl.uniformMatrix4fv(scaleUniform, false, new Float32Array($M([[3.5, 0, 0, 0], [0, 3.5, 0, 0], [0, 0, 3.5, 0], [0, 0, 0, 1]]).flatten()));
@@ -741,17 +723,15 @@ function mvTranslate(v)
 	multMatrix(Matrix.Translation($V([v[0], v[1], v[2]])).ensure4x4());
 }
 
-function mvRotate(t) 
+function mvRotate(q) 
 {
 	/*
 	multMatrix(Matrix.RotationY(t[1]).ensure4x4());
 	multMatrix(Matrix.RotationZ(t[2]).ensure4x4());
 	multMatrix(Matrix.RotationX(t[0]).ensure4x4());
 	*/
-	
-	multMatrix(Matrix.RotationY(t[1]).ensure4x4());
-	multMatrix(Matrix.RotationZ(t[2]).ensure4x4());
-	multMatrix(Matrix.RotationX(t[0]).ensure4x4());
+	var m1 = $M(q.toMatrix4(true));
+	multMatrix(m1);
 }
 
 /* 
