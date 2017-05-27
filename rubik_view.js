@@ -82,6 +82,7 @@ function CubeViewModel(cubeSize, cube)
 {
 	this.cube = cube;
 	this.dimension = cube.dimension;
+	this.animations = [];
 	this.cell_positions = [];
 	this.cell_rotations = [];
 	var q = new Quaternion();
@@ -207,11 +208,20 @@ function CubeViewModel(cubeSize, cube)
 			var q3 = q2.mul(q1);
 			this.cell_rotations[this.face[faceIdx][i]] = q3;
 		}
+	}
+	
+	this.onQuarterTurn = function(faceIdx)
+	{
 		this.face[faceIdx] = rotateArrayCW(this.face[faceIdx], this.dimension);
 
 		for(var i = 0; i < this.dimension; i++){
 			wrap_shift_view_ref(this.border[faceIdx], this);
 		}
+	}
+	
+	this.addAnimation = function(faceIdx, angle)
+	{
+		this.animations.push(new Animation(this, faceIdx, angle, 1000));
 	}
 	
 	/*
@@ -349,43 +359,7 @@ function start(cube)
   
   window.requestAnimationFrame(drawScene);
   
-  return cvm;
-}
-
-function keyDown(event)
-{
-	var key = event.keyCode;
-	if(key == 68){ // d
-		camera.rotateY(Math.PI/32);
-	}
-	if(key == 65){ // a
-		camera.rotateY(-Math.PI/32);
-	}
-	if(key == 83){ // s
-		camera.rotateX(Math.PI/32);
-	}
-	if(key == 87){ // w
-		camera.rotateX(-Math.PI/32);
-	}
-	var angle = Math.PI/2
-	if(key == 49) { // 1
-		cvm.rotate(1, angle);
-	}
-	if(key == 50) { // 2
-		cvm.rotate(2, angle);
-	}
-	if(key == 51) { // 3
-		cvm.rotate(3, angle);
-	}
-	if(key == 52) { // 4
-		cvm.rotate(4, angle);
-	}
-	if(key == 53) { // 5
-		cvm.rotate(5, angle);
-	}
-	if(key == 54) { // 6
-		cvm.rotate(0, angle);
-	}
+  return [cvm, camera];
 }
 
 //
@@ -651,6 +625,17 @@ function initBuffers()
 
 function drawScene(time) 
 {
+	if(cvm.animations.length > 0){
+		// Pop off any finished animations.
+		while(cvm.animations.length > 0 && cvm.animations[cvm.animations.length - 1].isFinished){
+			cvm.animations.pop();
+		}
+		if(cvm.animations.length > 0){
+			// Update animation at front of stack.
+			cvm.animations[cvm.animations.length - 1].update();
+		}
+	}
+
 	// Passed as milliseconds, want seconds.
 	time *= 0.001;
 	var deltaTime = time - lastTime;
@@ -837,4 +822,57 @@ function handleTextureLoaded(image, texture) {
   gl.generateMipmap(gl.TEXTURE_2D);
   gl.bindTexture(gl.TEXTURE_2D, null);
   textureLoaded = true;
+}
+
+/*
+	Takes a start and an end quaternion, and a value t. Finds the interpolated value at t between qStart and qEnd.
+	qStart: An initial quaternion.
+	qEnd: The target quaternion.
+	t: A value from [0, 1] which is the interpolation parameter.
+	Returns: Quaternion of qStart and qEnd interpolated at t.
+*/
+function slerp(qStart, qEnd, t){
+	var dif = qEnd.sub(qStart);
+	var delta = def.pow(t);
+	return qStart.mul(delta);
+}
+
+/*
+	Animates the rotation of a cube face.
+	cvm: a reference to the cube we are animating.
+	faceIdx: the index of the face we want to rotate, as defined in cvm.
+	angle: the angle we want to rotate the face around its normal.
+	rotationTime: the number of milliseconds the rotation should take to complete.
+*/
+function Animation(cvm, faceIdx, angle, rotationTime){
+	this.isFinished = false;
+	this.cvm = cvm;
+	this.startTime = new Date().getTime();
+	this.startAngle = 0;
+	this.targetAngle = angle;
+	this.currentAngle = 0;
+	this.rotationTime = rotationTime;
+	this.faceIdx = faceIdx;
+	var currentTime = this.startTime;
+	
+	Animation.easeInOut = function(t)
+	{
+		return 3*Math.pow(t, 2) - 2*Math.pow(t, 3);
+	}
+	
+	this.update = function(){
+		// Use smooth-step function to get smooth transition from 0 to 1.
+		currentTime = new Date().getTime();
+		var x = Math.min((currentTime - this.startTime) / this.rotationTime, 1.0);
+		// Sample the curve value at x.
+		var t = Animation.easeInOut(x);
+		if(t == 1.0){
+			this.isFinished = true;
+			this.cvm.onQuarterTurn(this.faceIdx);
+		}
+		var delta = this.targetAngle*t - this.currentAngle;
+		console.log(delta);
+		this.cvm.rotate(this.faceIdx, delta);
+		this.currentAngle += delta;
+	}
 }
