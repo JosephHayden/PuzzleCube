@@ -1,14 +1,61 @@
+var c;
 var cvm;
 var camera;
+var canvas;
+var mouseDown = false;
+var oldMousePos = null;
+var mousePos;
+var mouseSensitivity = 20;
 
 function main()
 {
-	var c = new Cube(3);
+	// Set up canvas and listeners.
+	canvas = document.getElementById("glwindow");
+	
+	canvas.addEventListener('mousemove', function(evt) {
+        mousePos = getMousePos(canvas, evt);
+        var message = 'Mouse position: ' + mousePos.x + ',' + mousePos.y;
+		if (mouseDown && oldMousePos != null){
+			var delta = [mousePos.x - oldMousePos.x, mousePos.y - oldMousePos.y];
+			camera.rotateY(delta[0]*mouseSensitivity*(Math.PI/32));
+			camera.rotateX(delta[1]*mouseSensitivity*(Math.PI/32));
+			oldMousePos = mousePos;
+		} else if (mouseDown){
+			oldMousePos = mousePos;
+		}
+      }, false);
+
+	canvas.addEventListener('mousedown', function(evt) {
+		mouseDown = true;
+	}, false);
+	
+	canvas.addEventListener('mouseup', function(evt) {
+		mouseDown = false;
+		oldMousePos = null;
+	}, false);
+	
+	canvas.addEventListener('mouseleave', function(evt) {
+		mouseDown = false;
+		oldMousePos = null;
+		console.log('Cursor out of canvas.');
+	}, false);
+	
+	// Create cube and start drawing it.
+	c = new Cube(3);
 	c.print();
 	[cvm, camera] = start(c);
-	cvm.print();
 }
 
+// Gets normalized mouse positions.
+function getMousePos(canvas, evt) {
+	var rect = canvas.getBoundingClientRect();
+	return {
+	  x: (evt.clientX - rect.left) / rect.width,
+	  y: (evt.clientY - rect.top) / rect.height
+	};
+}
+
+// Handles keyboard controls.
 function keyDown(event)
 {
 	var key = event.keyCode;
@@ -27,6 +74,8 @@ function keyDown(event)
 	var angle = Math.PI/2
 	if(key == 49) { // 1
 		cvm.addAnimation(1, angle);
+		c.rotate(1);
+		c.print();
 	}
 	if(key == 50) { // 2
 		cvm.addAnimation(2, angle);

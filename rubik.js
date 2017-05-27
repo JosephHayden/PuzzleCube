@@ -53,39 +53,10 @@ function Cube(dimension)
 		with each cell in row-major format.
 	*/
 	this.border = initBorderArray(this.dimension);
-	
-	var check_border = [
-	[[1, 0], [1, 1], [2, 0], [2, 1], [3, 0], [3, 1], [5, 3], [5, 2]], // Face 0
-	[[0, 0], [0, 2], [2, 0], [2, 2], [3, 0], [3, 2], [4, 0], [4, 2]], // Face 1
-	[[1, 3], [1, 1], [0, 2], [0, 3], [3, 0], [3, 2], [4, 1], [4, 0]], // Face 2
-	[[5, 3], [5, 2], [4, 3], [4, 2], [2, 3], [2, 2], [0, 3], [0, 2]], // Face 3
-	[[1, 2], [1, 3], [2, 2], [2, 3], [3, 2], [3, 3], [5, 1], [5, 0]], // Face 4
-	[[3, 2], [3, 3], [5, 2], [5, 3], [0, 1], [0, 0], [1, 0], [1, 2]], // Face 5
-	];
-	
-	var line = "";
-	for(var i = 0; i < check_border.length; i++){
-		for(var j=0; j < this.border[i].length; j++){
-			line = line.concat(check_border[i][j] + " ");
-		}
-		line = line.concat("\n");
-	}
-	line = line.concat("\n");
-	console.log("EXPECTED:");
-	console.log(line);
-	line = "";
-	for(var i = 0; i < check_border.length; i++){
-		for(var j=0; j < this.border[i].length; j++){
-			line = line.concat(this.border[i][j] + " ");
-		}
-		line = line.concat("\n");
-	}
-	console.log("ACTUAL:");
-	console.log(line);
 		
 	this.rotate = function(faceIdx){
 		// Rotate face.
-		wrap_shift(this.face[faceIdx].cell);
+		rotateArrayCW(this.face[faceIdx], this.dimension);
 		// Rotate border dim spaces.
 		for(var i = 0; i < this.dimension; i++){
 			wrap_shift_ref(this.border[faceIdx], this);
@@ -202,4 +173,34 @@ function wrap_shift_ref(array, cube)
 		}
 		cube.set_cell_ref(array[0][0], array[0][1], end);
 	}
+}
+
+/*
+	Rotates a 1D representation of a 2D array clockwise.
+*/
+function rotateArrayCW(array, dimension){
+	var newArr = Array(array.length);
+	for(var x = 0; x < dimension; x++){
+		for(var y = 0; y < dimension; y++){
+			var newX = dimension - 1 - x;
+			var newIdx = (dimension*y) + newX;
+			newArr[newIdx] = array[(dimension*x) + y];
+		}
+	}
+	return newArr;
+}
+
+/*
+	Rotates a 1D representation of a 2D array anticlockwise.
+*/
+function rotateArrayAntiCW(array, dimension){
+	var newArr = Array(array.length);
+	for(var x = 0; x < dimension; x++){
+		for(var y = 0; y < dimension; y++){
+			var newY = dimension - 1 - y;
+			var newIdx = (dimension*newY) + x;
+			newArr[newIdx] = array[(dimension*x) + y];
+		}
+	}
+	return newArr;
 }

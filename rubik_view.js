@@ -265,7 +265,6 @@ function CubeViewModel(cubeSize, cube)
 		loadIdentity();
 		mvTranslate([this.cell_positions[cellIdx][0], this.cell_positions[cellIdx][1], this.cell_positions[cellIdx][2]]);
 		mvRotate(this.cell_rotations[cellIdx]);
-		console.log("ROTATION: " + this.cell_rotations[cellIdx].toEuler());
 		setMatrixUniforms(shaderProgram);
 		gl.drawArrays(gl.TRIANGLES, 0, 36, gl.FLOAT, 0);
 	}
@@ -773,36 +772,6 @@ function setMatrixUniforms(program)
 	gl.uniformMatrix4fv(viewUniform, false, new Float32Array(camera.lookAt.flatten()));
 }
 
-/*
-	Rotates a 1D representation of a 2D array clockwise.
-*/
-function rotateArrayCW(array, dimension){
-	var newArr = Array(array.length);
-	for(var x = 0; x < dimension; x++){
-		for(var y = 0; y < dimension; y++){
-			var newX = dimension - 1 - x;
-			var newIdx = (dimension*y) + newX;
-			newArr[newIdx] = array[(dimension*x) + y];
-		}
-	}
-	return newArr;
-}
-
-/*
-	Rotates a 1D representation of a 2D array anticlockwise.
-*/
-function rotateArrayAntiCW(array, dimension){
-	var newArr = Array(array.length);
-	for(var x = 0; x < dimension; x++){
-		for(var y = 0; y < dimension; y++){
-			var newY = dimension - 1 - y;
-			var newIdx = (dimension*newY) + x;
-			newArr[newIdx] = array[(dimension*x) + y];
-		}
-	}
-	return newArr;
-}
-
 String.prototype.paddingLeft = function (paddingValue) {
    return String(paddingValue + this).slice(-paddingValue.length);
 };
@@ -871,7 +840,6 @@ function Animation(cvm, faceIdx, angle, rotationTime){
 			this.cvm.onQuarterTurn(this.faceIdx);
 		}
 		var delta = this.targetAngle*t - this.currentAngle;
-		console.log(delta);
 		this.cvm.rotate(this.faceIdx, delta);
 		this.currentAngle += delta;
 	}
