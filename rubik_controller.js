@@ -12,9 +12,13 @@ function main()
 	// Set up canvas and listeners.
 	canvas = document.getElementById("glwindow");
 	
+	initializeButtons();
+	
+	// Mouse control logic.
 	canvas.addEventListener('mousemove', function(evt) {
         mousePos = getMousePos(canvas, evt);
         var message = 'Mouse position: ' + mousePos.x + ',' + mousePos.y;
+		// Only rotate cube if mouse has direction and is clicked.
 		if (mouseDown && oldMousePos != null){
 			var delta = [mousePos.x - oldMousePos.x, mousePos.y - oldMousePos.y];
 			camera.rotateY(delta[0]*mouseSensitivity*(Math.PI/32));
@@ -25,15 +29,18 @@ function main()
 		}
       }, false);
 
+	// Sets mouseDown to true when mouse is clicked.
 	canvas.addEventListener('mousedown', function(evt) {
 		mouseDown = true;
 	}, false);
 	
+	// Sets mouseDown to false and clears oldMousePos when mouse is unclicked.
 	canvas.addEventListener('mouseup', function(evt) {
 		mouseDown = false;
 		oldMousePos = null;
 	}, false);
 	
+	// When the mouse leaves the canvas, treat that as if the user stopped clicking.
 	canvas.addEventListener('mouseleave', function(evt) {
 		mouseDown = false;
 		oldMousePos = null;
@@ -44,6 +51,76 @@ function main()
 	c = new Cube(3);
 	c.print();
 	[cvm, camera] = start(c);
+}
+
+/*
+	Creates event handlers for each face rotation button.
+*/
+function initializeButtons(){
+	var angle = Math.PI/2
+	
+	var cwb1 = document.getElementById("b1cw");
+	var cwb2 = document.getElementById("b2cw");
+	var cwb3 = document.getElementById("b3cw");
+	var cwb4 = document.getElementById("b4cw");
+	var cwb5 = document.getElementById("b5cw");
+	var cwb6 = document.getElementById("b6cw");
+	var acwb1 = document.getElementById("b1acw");
+	var acwb2 = document.getElementById("b2acw");
+	var acwb3 = document.getElementById("b3acw");
+	var acwb4 = document.getElementById("b4acw");
+	var acwb5 = document.getElementById("b5acw");
+	var acwb6 = document.getElementById("b6acw");
+
+	cwb1.addEventListener('click', function(){
+		cvm.addAnimation(1, -angle);
+		c.rotate(1, false);
+		c.print();
+	});
+	acwb1.addEventListener('click', function(){
+		cvm.addAnimation(1, angle);
+		c.rotate(1, true);
+	});
+	cwb2.addEventListener('click', function(){
+		cvm.addAnimation(2, -angle);
+		c.rotate(2, false);
+	});
+	acwb2.addEventListener('click', function(){
+		cvm.addAnimation(2, angle);
+		c.rotate(2, true);
+	});
+	cwb3.addEventListener('click', function(){
+		cvm.addAnimation(3, -angle);
+		c.rotate(3, false);
+	});
+	acwb3.addEventListener('click', function(){
+		cvm.addAnimation(3, angle);
+		c.rotate(3, true);
+	});
+	cwb4.addEventListener('click', function(){
+		cvm.addAnimation(4, -angle);
+		c.rotate(4, false);
+	});
+	acwb4.addEventListener('click', function(){
+		cvm.addAnimation(4, angle);
+		c.rotate(4, true);
+	});
+	cwb5.addEventListener('click', function(){
+		cvm.addAnimation(5, -angle);
+		c.rotate(5, false);
+	});
+	acwb5.addEventListener('click', function(){
+		cvm.addAnimation(5, angle);
+		c.rotate(5, true);
+	});
+	cwb6.addEventListener('click', function(){
+		cvm.addAnimation(0, -angle);
+		c.rotate(0, false);
+	});
+	acwb6.addEventListener('click', function(){
+		cvm.addAnimation(0, angle);
+		c.rotate(0, true);
+	});
 }
 
 // Gets normalized mouse positions.
@@ -74,8 +151,7 @@ function keyDown(event)
 	var angle = Math.PI/2
 	if(key == 49) { // 1
 		cvm.addAnimation(1, angle);
-		c.rotate(1);
-		c.print();
+		c.rotate(1, false);
 	}
 	if(key == 50) { // 2
 		cvm.addAnimation(2, angle);

@@ -20,11 +20,20 @@ function wrap_shift_reverse(array)
 	}
 }
 
+/*
+	Contains values for one face of an NxN puzzle-cube.
+	dimension: N
+	value: the default value all cells in face will be populated with.
+*/
 function Side(dimension, value)
 {
 	this.cell = Array(dimension*dimension).fill(value);
 }
 
+/*
+	Model of an NxN puzzle-cube.
+	dimension: N
+*/
 function Cube(dimension)
 {
 	this.numSides = 6;
@@ -34,11 +43,23 @@ function Cube(dimension)
 		this.face.push(new Side(dimension, sideIdx));
 	}
 	
-	this.get_cell_ref = function(faceIdx, cellIdx){
+	/*
+		Gets the value being referenced by cell cellIdx of face faceIdx.
+		faceIdx: index of the face containing desired cell.
+		cellIdx: index of the cell within the face.
+	*/
+	this.get_cell_ref = function(faceIdx, cellIdx)
+	{
 		return this.face[faceIdx].cell[cellIdx];
 	}
 	
-	this.set_cell_ref = function(faceIdx, cellIdx, value){
+	/*
+		Sets the value being referenced by cell cellIdx of face faceIdx.
+		faceIdx: index of the face containing desired cell.
+		cellIdx: index of the cell within the face.
+	*/
+	this.set_cell_ref = function(faceIdx, cellIdx, value)
+	{
 		this.face[faceIdx].cell[cellIdx] = value;
 	}
 	
@@ -54,16 +75,37 @@ function Cube(dimension)
 	*/
 	this.border = initBorderArray(this.dimension);
 		
-	this.rotate = function(faceIdx){
-		// Rotate face.
-		rotateArrayCW(this.face[faceIdx], this.dimension);
-		// Rotate border dim spaces.
-		for(var i = 0; i < this.dimension; i++){
-			wrap_shift_ref(this.border[faceIdx], this);
+	/*
+		Rotates a face of the model 90 degrees.
+		faceIdx: Index of the face being rotated.
+		antiClockwise: A boolean. If true, rotate face anticlockwise, else clockwise.
+	*/
+	this.rotate = function(faceIdx, antiClockwise)
+	{
+		if(!antiClockwise){
+			// Rotate face.
+			rotateArrayAntiCW(this.face[faceIdx], this.dimension);
+			// Rotate border dim spaces.
+			for(var i = 0; i < this.dimension; i++){
+				//wrap_shift_ref_reverse(this.border[faceIdx], this);
+				wrap_shift_ref(this.border[faceIdx], this);
+			}
+		} else {
+			// Rotate face.
+			rotateArrayCW(this.face[faceIdx], this.dimension);
+			// Rotate border dim spaces.
+			for(var i = 0; i < this.dimension; i++){
+				wrap_shift_ref_reverse(this.border[faceIdx], this);
+				//wrap_shift_ref(this.border[faceIdx], this);
+			}
 		}
 	}
 	
-	this.print = function(){
+	/*
+		Prints user-friendly representation of unwrapped cube model to console.
+	*/
+	this.print = function()
+	{
 		str = Array(this.dimension + 1).join(" ");
 		for(var c=0; c < this.face[0].cell.length; c++){
 			str = str.concat(this.face[0].cell[c]);
@@ -96,7 +138,12 @@ function Cube(dimension)
 	}
 }
 
-function initBorderArray(dimension){
+/* 
+	Creates an array of border relations for a cube model of a given dimension.
+	dimension: The dimension N of an NxN cube.
+*/
+function initBorderArray(dimension)
+{
 	border = [[],[],[],[],[],[]];
 	// Face 0
 	var border_faces = [1, 2, 3];
@@ -175,10 +222,24 @@ function wrap_shift_ref(array, cube)
 	}
 }
 
+function wrap_shift_ref_reverse(array, cube)
+{
+	if(array.length > 1){
+		var first = cube.get_cell_ref(array[0][0], array[0][1]);
+		for(var idx = 0; idx < array.length - 1; idx++){
+			cube.set_cell_ref(array[idx][0], array[idx][1], cube.get_cell_ref(array[idx+1][0], array[idx+1][1]));
+		}
+		cube.set_cell_ref(array[array.length - 1][0], array[array.length - 1][1], first);
+	}
+}
+
 /*
-	Rotates a 1D representation of a 2D array clockwise.
+	Rotates a 1D representation of a 2D array anticlockwise.
+	array: The array being rotated.
+	dimension: The dimension N of the NxN array which has been flattened.
 */
-function rotateArrayCW(array, dimension){
+function rotateArrayAntiCW(array, dimension)
+{
 	var newArr = Array(array.length);
 	for(var x = 0; x < dimension; x++){
 		for(var y = 0; y < dimension; y++){
@@ -191,9 +252,12 @@ function rotateArrayCW(array, dimension){
 }
 
 /*
-	Rotates a 1D representation of a 2D array anticlockwise.
+	Rotates a 1D representation of a 2D array clockwise.
+	array: The array being rotated.
+	dimension: The dimension N of the NxN array which has been flattened.
 */
-function rotateArrayAntiCW(array, dimension){
+function rotateArrayCW(array, dimension)
+{
 	var newArr = Array(array.length);
 	for(var x = 0; x < dimension; x++){
 		for(var y = 0; y < dimension; y++){

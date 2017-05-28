@@ -1,0 +1,11 @@
+#control-buttons {
+	display: flex;
+}
+
+.control {
+	flex-grow: 1;
+}
+
+#applet-wrapper {
+	width: 500px; /* Same as initial width of applet. */
+}

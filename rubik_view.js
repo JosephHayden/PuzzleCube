@@ -117,9 +117,10 @@ function CubeViewModel(cubeSize, cube)
 				var x = x_idx * cubeSize - shift;
 				var y = y_idx * cubeSize - shift;
 				var z = depth * cubeSize - shift;
+				// Set the cell position
 				this.cell_positions.push([x, y, z]);
-				//this.cell_rotations.push(Quaternion.fromEuler(1, 0, 0));
 				var quat = Quaternion.fromAxisAngle([0, 0, 1], 0);
+				// Set the cell rotation
 				this.cell_rotations.push(quat);
 
 				sideEnum = {
@@ -133,6 +134,7 @@ function CubeViewModel(cubeSize, cube)
 				
 				var sharedSides = [];
 
+				// Determine which faces the cube is a part of and add it to the sharedSides array.
 				if (x_idx == 0) { // Left face
 					sharedSides.push(sideEnum.LEFT);
 				} else if (x_idx == this.dimension - 1) { // Right face
@@ -149,6 +151,7 @@ function CubeViewModel(cubeSize, cube)
 					sharedSides.push(sideEnum.FRONT);
 				}
 				
+				// Using sharedSides array, populate each face array with the correct cells.
 				for(var f=0; f < sharedSides.length; f++){
 					this.face[sharedSides[f]].push(cellIdx);
 				}
@@ -157,6 +160,8 @@ function CubeViewModel(cubeSize, cube)
 		}
  	}
 	
+	// Population results in unsorted lists. We now sort each face as if it were a
+	// flat two-dimensional array, to ensure borders in the unwrapped cube line up correctly initially.
 	for(var faceIdx = 0; faceIdx < this.face.length; faceIdx++){
 		switch(faceIdx){
 			case sideEnum.LEFT:
@@ -182,16 +187,27 @@ function CubeViewModel(cubeSize, cube)
 		}
 	}
 	
+	/*
+		Gets the value being referenced by the cell at cellIdx in the face at faceIdx.
+	*/
 	this.get_cell_ref = function(faceIdx, cellIdx)
 	{
 		return this.face[faceIdx][cellIdx];
 	}
 	
+	/*
+		Sets the value being referenced by the cell at cellIdx in the face at faceIdx.
+	*/
 	this.set_cell_ref = function(faceIdx, cellIdx, value)
 	{
 		this.face[faceIdx][cellIdx] = value;
 	}
 	
+	/*
+		Performs the graphical rotation of a cube face.
+		faceIdx: the index of the face being rotated.
+		angle: the angle (in radians) of rotation.
+	*/
 	this.rotate = function(faceIdx, angle)
 	{
 		// Rotate cells in face.
@@ -210,15 +226,32 @@ function CubeViewModel(cubeSize, cube)
 		}
 	}
 	
-	this.onQuarterTurn = function(faceIdx)
+	/*
+		Updates the cells associated with each cube face after a quarter turn.
+		faceIdx: The index of the face being rotated.
+		antiClockwise: A boolean. True if face is rotated anticlockwise, false otherwise.
+	*/
+	this.onQuarterTurn = function(faceIdx, antiClockwise)
 	{
-		this.face[faceIdx] = rotateArrayCW(this.face[faceIdx], this.dimension);
+		if(!antiClockwise){
+			this.face[faceIdx] = rotateArrayCW(this.face[faceIdx], this.dimension);
 
-		for(var i = 0; i < this.dimension; i++){
-			wrap_shift_view_ref(this.border[faceIdx], this);
+			for(var i = 0; i < this.dimension; i++){
+				wrap_shift_view_ref_reverse(this.border[faceIdx], this);
+			}
+		} else {
+			this.face[faceIdx] = rotateArrayAntiCW(this.face[faceIdx], this.dimension);
+
+			for(var i = 0; i < this.dimension; i++){
+				wrap_shift_view_ref(this.border[faceIdx], this);
+			}
 		}
+		this.print();
 	}
 	
+	/*
+		Puts a new animation on the cube animation stack.
+	*/
 	this.addAnimation = function(faceIdx, angle)
 	{
 		this.animations.push(new Animation(this, faceIdx, angle, 1000));
@@ -244,7 +277,8 @@ function CubeViewModel(cubeSize, cube)
 		sliceIdx: index of the face to draw.
 		Requires GL setup prior to use.
 	*/
-	this.drawSlice = function(sliceIdx){
+	this.drawSlice = function(sliceIdx)
+	{
 		for(var cellIdx=0; cellIdx < this.face[sliceIdx].length; cellIdx++){
 			loadIdentity();
 			mvTranslate([this.cell_positions[this.face[sliceIdx][cellIdx]][0], 
@@ -261,7 +295,8 @@ function CubeViewModel(cubeSize, cube)
 		cellIdx: index of the cell to draw.
 		Requires GL setup prior to use.	
 	*/
-	this.drawCell = function(cellIdx){
+	this.drawCell = function(cellIdx)
+	{
 		loadIdentity();
 		mvTranslate([this.cell_positions[cellIdx][0], this.cell_positions[cellIdx][1], this.cell_positions[cellIdx][2]]);
 		mvRotate(this.cell_rotations[cellIdx]);
@@ -269,7 +304,11 @@ function CubeViewModel(cubeSize, cube)
 		gl.drawArrays(gl.TRIANGLES, 0, 36, gl.FLOAT, 0);
 	}
 	
-	this.print = function(){
+	/*
+		Prints a user-friendly representation of the unwrapped cube to console. 
+	*/
+	this.print = function()
+	{
 		str = Array(this.dimension + 1).join("   ");
 		for(var c=0; c < this.face[0].length; c++){
 			str = str.concat(this.face[0][c].toString().paddingLeft("   "));
@@ -303,6 +342,10 @@ function CubeViewModel(cubeSize, cube)
 	}
 }
 
+/*
+	Given an array of references, shifts the value each reference points to forward once.
+	ie. the new array[1] will point to the old array[0], etc...
+*/
 function wrap_shift_view_ref(array, cubeViewModel)
 {
 	if(array.length > 1){
@@ -314,12 +357,16 @@ function wrap_shift_view_ref(array, cubeViewModel)
 	}
 }
 
-function wrap_shift_view_ref_rev(array, cubeViewModel)
+/*
+	Given an array of references, shifts the value each reference points to backwards once.
+	ie. the new array[0] will point to the old array[1], etc...
+*/
+function wrap_shift_view_ref_reverse(array, cubeViewModel)
 {
 	if(array.length > 1){
 		var front = cubeViewModel.get_cell_ref(array[0][0], array[0][1]);
-		for(var idx = 1; idx > array.length; idx++){
-			cubeViewModel.set_cell_ref(array[idx][0], array[idx][1], cubeViewModel.get_cell_ref(array[idx-1][0], array[idx-1][1]));
+		for(var idx = 0; idx < array.length - 1; idx++){
+			cubeViewModel.set_cell_ref(array[idx][0], array[idx][1], cubeViewModel.get_cell_ref(array[idx+1][0], array[idx+1][1]));
 		}
 		cubeViewModel.set_cell_ref(array[array.length - 1][0], array[array.length - 1][1], front);
 	}
@@ -384,12 +431,18 @@ function initWebGL()
   }
 }
 
+/*
+	Resizes the GL viewport according to canvas size, and changes the aspect ratio.
+*/
 function resize() 
 {
 	gl.viewport(0, 0, canvas.width, canvas.height);
 	horizAspect = canvas.height/canvas.width;
 }
 
+/*
+	Initializes all necessary shaders.
+*/
 function initShaders() 
 {
 	var fragmentShader = getShader(gl, 'shader-fs');
@@ -436,6 +489,12 @@ function initShaders()
 	gl.vertexAttribPointer(textureCoordAttribute, 2, gl.FLOAT, false, 0, 0);
 }
 
+/*
+	Creates a shader from an element id and a type.
+	gl: the gl context being used.
+	id: the id of the script tag holding the shader.
+	type: the type of the shader (can be x-shader/x-fragment or x-shader/x-vertexx).
+*/
 function getShader(gl, id, type) 
 {
 	var shaderScript, theSource, currentChild, shader;
@@ -469,6 +528,9 @@ function getShader(gl, id, type)
 	return shader;
 }
 
+/*
+	Initializes all necessary buffers.
+*/
 function initBuffers() 
 {
 	overlayCubeVerticesBuffer = gl.createBuffer();
@@ -622,6 +684,10 @@ function initBuffers()
 	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoordinates), gl.STATIC_DRAW);
 }
 
+/*
+	Is called each time we want to do a graphical update.
+	Updates any animations and draws the full scene.
+*/
 function drawScene(time) 
 {
 	if(cvm.animations.length > 0){
@@ -656,9 +722,7 @@ function drawScene(time)
 	gl.bindBuffer(gl.ARRAY_BUFFER, cubeColorBuffer);
 	gl.vertexAttribPointer(vertexColorAttribute, 3, gl.FLOAT, false, 0, 0);
 	
-	//cvm.drawCell(17);
 	cvm.drawFull();
-	//cvm.drawSlice(5);
 	
 	gl.useProgram(overlayShaderProgram);
 	// Only want to draw the overlay if the texture is loaded (since the texture is all we're using it for).
@@ -669,6 +733,9 @@ function drawScene(time)
 	requestAnimationFrame(drawScene);
 }
 
+/*
+	Draws the numbers for the cube faces.
+*/
 function drawOverlay(){
 	loadIdentity();
 	
@@ -709,11 +776,6 @@ function mvTranslate(v)
 
 function mvRotate(q) 
 {
-	/*
-	multMatrix(Matrix.RotationY(t[1]).ensure4x4());
-	multMatrix(Matrix.RotationZ(t[2]).ensure4x4());
-	multMatrix(Matrix.RotationX(t[0]).ensure4x4());
-	*/
 	var m1 = $M(q.toMatrix4(true));
 	multMatrix(m1);
 }
@@ -760,6 +822,9 @@ function mvScale(s)
 	multMatrix(Matrix.I(4).x(s));
 }
 
+/*
+	Sets all uniforms for the puzzle-cube shader.
+*/
 function setMatrixUniforms(program) 
 {
 	var pUniform = gl.getUniformLocation(program, "uPMatrix");
@@ -772,10 +837,17 @@ function setMatrixUniforms(program)
 	gl.uniformMatrix4fv(viewUniform, false, new Float32Array(camera.lookAt.flatten()));
 }
 
+/*
+	Pads string with as much left padding as required.
+	paddingValue: the string used for padding.
+*/
 String.prototype.paddingLeft = function (paddingValue) {
    return String(paddingValue + this).slice(-paddingValue.length);
 };
 
+/*
+	Initializes necessary textures.
+*/
 function initTextures() {
   overlayTexture = gl.createTexture();
   overlayImage = new Image();
@@ -783,6 +855,9 @@ function initTextures() {
   overlayImage.src = 'overlay_texture.png';
 }
 
+/*
+	Called once texture is loaded. Sets up GL bindings for texture.
+*/
 function handleTextureLoaded(image, texture) {
   gl.bindTexture(gl.TEXTURE_2D, texture);
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
@@ -836,10 +911,15 @@ function Animation(cvm, faceIdx, angle, rotationTime){
 		// Sample the curve value at x.
 		var t = Animation.easeInOut(x);
 		if(t == 1.0){
+			var antiClockwise = false;
+			if(this.targetAngle > 0){
+				antiClockwise = true;
+			}
 			this.isFinished = true;
-			this.cvm.onQuarterTurn(this.faceIdx);
+			this.cvm.onQuarterTurn(this.faceIdx, antiClockwise);
 		}
 		var delta = this.targetAngle*t - this.currentAngle;
+		// TODO update to rotate cw or counter clockwise depending on which is used.
 		this.cvm.rotate(this.faceIdx, delta);
 		this.currentAngle += delta;
 	}
