@@ -8,4 +8,6 @@
 
 #applet-wrapper {
 	width: 500px; /* Same as initial width of applet. */
+	margin-left: auto;
+	margin-right: auto;
 }
