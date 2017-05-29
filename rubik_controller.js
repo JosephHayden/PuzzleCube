@@ -6,6 +6,9 @@ var mouseDown = false;
 var oldMousePos = null;
 var mousePos;
 var mouseSensitivity = 20;
+var animationLength = 200;
+var ACTIONSPACE; // All possible actions.
+var actions = []; // An array of actions to be taken.
 
 function main()
 {
@@ -51,6 +54,20 @@ function main()
 	c = new Cube(3);
 	c.print();
 	[cvm, camera] = start(c);
+	ACTIONSPACE = [
+		new Action(0, false), 
+		new Action(0, true), 
+		new Action(1, false), 
+		new Action(1, true),
+		new Action(2, false), 
+		new Action(2, true),	
+		new Action(3, false), 
+		new Action(3, true),
+		new Action(4, false), 
+		new Action(4, true),
+		new Action(5, false), 
+		new Action(5, true)
+	];
 }
 
 /*
@@ -71,55 +88,66 @@ function initializeButtons(){
 	var acwb4 = document.getElementById("b4acw");
 	var acwb5 = document.getElementById("b5acw");
 	var acwb6 = document.getElementById("b6acw");
-
+	
 	cwb1.addEventListener('click', function(){
-		cvm.addAnimation(1, -angle);
+		cvm.addAnimation(1, -angle, animationLength);
 		c.rotate(1, false);
 		c.print();
 	});
 	acwb1.addEventListener('click', function(){
-		cvm.addAnimation(1, angle);
+		cvm.addAnimation(1, angle, animationLength);
 		c.rotate(1, true);
 	});
 	cwb2.addEventListener('click', function(){
-		cvm.addAnimation(2, -angle);
+		cvm.addAnimation(2, -angle, animationLength);
 		c.rotate(2, false);
 	});
 	acwb2.addEventListener('click', function(){
-		cvm.addAnimation(2, angle);
+		cvm.addAnimation(2, angle, animationLength);
 		c.rotate(2, true);
 	});
 	cwb3.addEventListener('click', function(){
-		cvm.addAnimation(3, -angle);
+		cvm.addAnimation(3, -angle, animationLength);
 		c.rotate(3, false);
 	});
 	acwb3.addEventListener('click', function(){
-		cvm.addAnimation(3, angle);
+		cvm.addAnimation(3, angle, animationLength);
 		c.rotate(3, true);
 	});
 	cwb4.addEventListener('click', function(){
-		cvm.addAnimation(4, -angle);
+		cvm.addAnimation(4, -angle, animationLength);
 		c.rotate(4, false);
 	});
 	acwb4.addEventListener('click', function(){
-		cvm.addAnimation(4, angle);
+		cvm.addAnimation(4, angle, animationLength);
 		c.rotate(4, true);
 	});
 	cwb5.addEventListener('click', function(){
-		cvm.addAnimation(5, -angle);
+		cvm.addAnimation(5, -angle, animationLength);
 		c.rotate(5, false);
 	});
 	acwb5.addEventListener('click', function(){
-		cvm.addAnimation(5, angle);
+		cvm.addAnimation(5, angle, animationLength);
 		c.rotate(5, true);
 	});
 	cwb6.addEventListener('click', function(){
-		cvm.addAnimation(0, -angle);
+		cvm.addAnimation(0, -angle, animationLength);
 		c.rotate(0, false);
 	});
 	acwb6.addEventListener('click', function(){
-		cvm.addAnimation(0, angle);
+		cvm.addAnimation(0, angle, animationLength);
 		c.rotate(0, true);
+	});
+	
+	var randomizeButton = document.getElementById("randomize");
+	randomizeButton.addEventListener('click', function(){
+		randomize(30);
+		executeAllActions(cvm);
+		clearActions();
+	});
+	var resetButton = document.getElementById("reset");
+	resetButton.addEventListener('click', function(){
+		cvm = restart(c);
 	});
 }
 
@@ -150,22 +178,72 @@ function keyDown(event)
 	}
 	var angle = Math.PI/2
 	if(key == 49) { // 1
-		cvm.addAnimation(1, angle);
+		cvm.addAnimation(1, angle, animationLength);
 		c.rotate(1, false);
 	}
 	if(key == 50) { // 2
-		cvm.addAnimation(2, angle);
+		cvm.addAnimation(2, angle, animationLength);
 	}
 	if(key == 51) { // 3
-		cvm.addAnimation(3, angle);
+		cvm.addAnimation(3, angle, animationLength);
 	}
 	if(key == 52) { // 4
-		cvm.addAnimation(4, angle);
+		cvm.addAnimation(4, angle, animationLength);
 	}
 	if(key == 53) { // 5
-		cvm.addAnimation(5, angle);
+		cvm.addAnimation(5, angle, animationLength);
 	}
 	if(key == 54) { // 6
-		cvm.addAnimation(0, angle);
+		cvm.addAnimation(0, angle, animationLength);
+	}
+}
+
+/*
+	Adds a list of random actions to the action array.
+	cvm: the cube view model.
+	steps: the number of actions the randomizer should add.
+*/
+function randomize(steps){
+	var lastAction = null;
+	for(var i = 0; i < steps; i++){
+		var actionIdx = Math.floor(Math.random()*ACTIONSPACE.length);
+		while(lastAction != null && lastAction.faceIdx == ACTIONSPACE[actionIdx].faceIdx && 
+				lastAction.antiClockwise != ACTIONSPACE[actionIdx].antiClockwise) {
+			// Want to avoid taking an action that undoes the last action.
+			actionIdx = Math.floor(Math.random()*ACTIONSPACE.length);
+		}
+		actions.push(ACTIONSPACE[actionIdx]);
+		lastAction = ACTIONSPACE[actionIdx];
+	}
+}
+
+function clearActions(){
+	actions = [];
+}
+
+/*
+	Executes all actions in the action array.
+	cvm: the viewmodel you are applying the actions to.
+*/
+function executeAllActions(cvm){
+	for(var i = 0; i < actions.length; i++){
+		actions[i].execute(cvm);
+	}
+}
+
+function Action(faceIdx, antiClockwise)
+{
+	this.faceIdx = faceIdx;
+	this.antiClockwise = antiClockwise;
+	this.angle;
+	if (this.antiClockwise) {
+		this.angle = Math.PI/2;
+	} else {
+		this.angle = -Math.PI/2;
+	}
+	
+	this.execute = function(cvm)
+	{
+		cvm.addAnimation(this.faceIdx, this.angle, animationLength);
 	}
 }

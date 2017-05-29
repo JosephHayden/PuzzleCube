@@ -251,10 +251,13 @@ function CubeViewModel(cubeSize, cube)
 	
 	/*
 		Puts a new animation on the cube animation stack.
+		faceIdx: the index of the face to be rotated in the animation.
+		angle: the angle of the rotation in radians.
+		length: the length of the rotation in milliseconds.
 	*/
-	this.addAnimation = function(faceIdx, angle)
+	this.addAnimation = function(faceIdx, angle, length)
 	{
-		this.animations.push(new Animation(this, faceIdx, angle, 1000));
+		this.animations.push(new Animation(this, faceIdx, angle, length));
 	}
 	
 	/*
@@ -406,6 +409,11 @@ function start(cube)
   window.requestAnimationFrame(drawScene);
   
   return [cvm, camera];
+}
+
+function restart(cube){
+	cvm = new CubeViewModel(2.02, cube);
+	return cvm;
 }
 
 //
@@ -692,12 +700,20 @@ function drawScene(time)
 {
 	if(cvm.animations.length > 0){
 		// Pop off any finished animations.
-		while(cvm.animations.length > 0 && cvm.animations[cvm.animations.length - 1].isFinished){
-			cvm.animations.pop();
+		while(cvm.animations.length > 0 && cvm.animations[0].hasFinished){
+			/*  
+				Apparently this is slow for large arrays but it's unlikely the user will queue 100K+ rotations
+				so we're using it.
+			*/
+			cvm.animations.shift();
 		}
 		if(cvm.animations.length > 0){
+			var curAnimation = cvm.animations[0];
+			if(!curAnimation.isRunning){
+				curAnimation.start();
+			}
 			// Update animation at front of stack.
-			cvm.animations[cvm.animations.length - 1].update();
+			curAnimation.update();
 		}
 	}
 
@@ -889,15 +905,22 @@ function slerp(qStart, qEnd, t){
 	rotationTime: the number of milliseconds the rotation should take to complete.
 */
 function Animation(cvm, faceIdx, angle, rotationTime){
-	this.isFinished = false;
+	this.isRunning = false;
+	this.hasFinished = false;
 	this.cvm = cvm;
-	this.startTime = new Date().getTime();
+	this.startTime;
 	this.startAngle = 0;
 	this.targetAngle = angle;
 	this.currentAngle = 0;
 	this.rotationTime = rotationTime;
 	this.faceIdx = faceIdx;
-	var currentTime = this.startTime;
+	var currentTime;
+	
+	this.start = function(){
+		this.startTime = new Date().getTime();
+		currentTime = this.startTime;
+		this.isRunning = true;
+	}
 	
 	Animation.easeInOut = function(t)
 	{
@@ -915,7 +938,8 @@ function Animation(cvm, faceIdx, angle, rotationTime){
 			if(this.targetAngle > 0){
 				antiClockwise = true;
 			}
-			this.isFinished = true;
+			this.isRunning = false;
+			this.hasFinished = true;
 			this.cvm.onQuarterTurn(this.faceIdx, antiClockwise);
 		}
 		var delta = this.targetAngle*t - this.currentAngle;
