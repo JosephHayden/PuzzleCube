@@ -1,4 +1,4 @@
-var c;
+var cubeModel;
 var cvm;
 var camera;
 var canvas;
@@ -51,9 +51,9 @@ function main()
 	}, false);
 	
 	// Create cube and start drawing it.
-	c = new Cube(3);
-	c.print();
-	[cvm, camera] = start(c);
+	cubeModel = new Cube(3);
+	cubeModel.print();
+	[cvm, camera] = start(cubeModel);
 	ACTIONSPACE = [
 		new Action(0, false), 
 		new Action(0, true), 
@@ -91,52 +91,52 @@ function initializeButtons(){
 	
 	cwb1.addEventListener('click', function(){
 		cvm.addAnimation(1, -angle, animationLength);
-		c.rotate(1, false);
-		c.print();
+		cubeModel.rotate(1, false);
+		cubeModel.print();
 	});
 	acwb1.addEventListener('click', function(){
 		cvm.addAnimation(1, angle, animationLength);
-		c.rotate(1, true);
+		cubeModel.rotate(1, true);
 	});
 	cwb2.addEventListener('click', function(){
 		cvm.addAnimation(2, -angle, animationLength);
-		c.rotate(2, false);
+		cubeModel.rotate(2, false);
 	});
 	acwb2.addEventListener('click', function(){
 		cvm.addAnimation(2, angle, animationLength);
-		c.rotate(2, true);
+		cubeModel.rotate(2, true);
 	});
 	cwb3.addEventListener('click', function(){
 		cvm.addAnimation(3, -angle, animationLength);
-		c.rotate(3, false);
+		cubeModel.rotate(3, false);
 	});
 	acwb3.addEventListener('click', function(){
 		cvm.addAnimation(3, angle, animationLength);
-		c.rotate(3, true);
+		cubeModel.rotate(3, true);
 	});
 	cwb4.addEventListener('click', function(){
 		cvm.addAnimation(4, -angle, animationLength);
-		c.rotate(4, false);
+		cubeModel.rotate(4, false);
 	});
 	acwb4.addEventListener('click', function(){
 		cvm.addAnimation(4, angle, animationLength);
-		c.rotate(4, true);
+		cubeModel.rotate(4, true);
 	});
 	cwb5.addEventListener('click', function(){
 		cvm.addAnimation(5, -angle, animationLength);
-		c.rotate(5, false);
+		cubeModel.rotate(5, false);
 	});
 	acwb5.addEventListener('click', function(){
 		cvm.addAnimation(5, angle, animationLength);
-		c.rotate(5, true);
+		cubeModel.rotate(5, true);
 	});
 	cwb6.addEventListener('click', function(){
 		cvm.addAnimation(0, -angle, animationLength);
-		c.rotate(0, false);
+		cubeModel.rotate(0, false);
 	});
 	acwb6.addEventListener('click', function(){
 		cvm.addAnimation(0, angle, animationLength);
-		c.rotate(0, true);
+		cubeModel.rotate(0, true);
 	});
 	
 	var randomizeButton = document.getElementById("randomize");
@@ -147,7 +147,7 @@ function initializeButtons(){
 	});
 	var resetButton = document.getElementById("reset");
 	resetButton.addEventListener('click', function(){
-		cvm = restart(c);
+		cvm = restart(cubeModel);
 	});
 }
 
@@ -179,7 +179,7 @@ function keyDown(event)
 	var angle = Math.PI/2
 	if(key == 49) { // 1
 		cvm.addAnimation(1, angle, animationLength);
-		c.rotate(1, false);
+		cubeModel.rotate(1, false);
 	}
 	if(key == 50) { // 2
 		cvm.addAnimation(2, angle, animationLength);
