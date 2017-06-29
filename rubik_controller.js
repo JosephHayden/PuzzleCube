@@ -47,7 +47,6 @@ function main()
 	canvas.addEventListener('mouseleave', function(evt) {
 		mouseDown = false;
 		oldMousePos = null;
-		console.log('Cursor out of canvas.');
 	}, false);
 	
 	// Create cube and start drawing it.

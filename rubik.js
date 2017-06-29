@@ -21,16 +21,6 @@ function wrap_shift_reverse(array)
 }
 
 /*
-	Contains values for one face of an NxN puzzle-cube.
-	dimension: N
-	value: the default value all cells in face will be populated with.
-*/
-function Side(dimension, value)
-{
-	this.cell = Array(dimension*dimension).fill(value);
-}
-
-/*
 	Model of an NxN puzzle-cube.
 	dimension: N
 */
@@ -40,7 +30,7 @@ function Cube(dimension)
 	this.dimension = dimension;
 	this.face = [];
 	for(var sideIdx=0; sideIdx < this.numSides; sideIdx++){
-		this.face.push(new Side(dimension, sideIdx));
+		this.face.push(Array(dimension*dimension).fill(sideIdx));
 	}
 	
 	/*
@@ -50,7 +40,7 @@ function Cube(dimension)
 	*/
 	this.get_cell_ref = function(faceIdx, cellIdx)
 	{
-		return this.face[faceIdx].cell[cellIdx];
+		return this.face[faceIdx][cellIdx];
 	}
 	
 	/*
@@ -60,7 +50,7 @@ function Cube(dimension)
 	*/
 	this.set_cell_ref = function(faceIdx, cellIdx, value)
 	{
-		this.face[faceIdx].cell[cellIdx] = value;
+		this.face[faceIdx][cellIdx] = value;
 	}
 	
 	// Each of these is a [face, cell] pair in the strip of all cells bordering a face, listed anticlockwise.
@@ -107,9 +97,9 @@ function Cube(dimension)
 	this.print = function()
 	{
 		str = Array(this.dimension + 1).join(" ");
-		for(var c=0; c < this.face[0].cell.length; c++){
-			str = str.concat(this.face[0].cell[c]);
-			if((c + 1) % (this.dimension) == 0 && c != this.face[0].cell.length - 1){
+		for(var c=0; c < this.face[0].length; c++){
+			str = str.concat(this.face[0][c]);
+			if((c + 1) % (this.dimension) == 0 && c != this.face[0].length - 1){
 				str = str.concat("\n" + Array(this.dimension + 1).join(" "));
 			}
 		}
@@ -117,7 +107,7 @@ function Cube(dimension)
 		for(var row=0; row < this.dimension; row++){ 
 			for(var f=1; f < 4; f++){
 				for(var c=row*this.dimension; c < (row + 1)*this.dimension; c++){
-					str = str.concat(this.face[f].cell[c]);
+					str = str.concat(this.face[f][c]);
 				}
 			}
 			if(row != this.dimension - 1){
@@ -126,8 +116,8 @@ function Cube(dimension)
 		}
 		str = str.concat("\n" + Array(this.dimension + 1).join(" "));
 		for(var f=4; f < 6; f++){
-			for(var c=0; c < this.face[f].cell.length; c++){
-				str = str.concat(this.face[f].cell[c]);
+			for(var c=0; c < this.face[f].length; c++){
+				str = str.concat(this.face[f][c]);
 				if((c + 1) % (this.dimension) == 0){
 					str = str.concat("\n" + Array(this.dimension + 1).join(" "));
 				}
