@@ -51,7 +51,6 @@ function main()
 	
 	// Create cube and start drawing it.
 	cubeModel = new Cube(3);
-	cubeModel.print();
 	[cvm, camera] = start(cubeModel);
 	ACTIONSPACE = [
 		new Action(0, false), 
@@ -67,6 +66,9 @@ function main()
 		new Action(5, false), 
 		new Action(5, true)
 	];
+	
+	// Set up algorithm actions.
+	Algorithm.init(ACTIONSPACE);
 }
 
 /*
@@ -92,18 +94,25 @@ function initializeButtons(){
 		cvm.addAnimation(1, -angle, animationLength);
 		cubeModel.rotate(1, false);
 		cubeModel.print();
+		cvm.print();
 	});
 	acwb1.addEventListener('click', function(){
 		cvm.addAnimation(1, angle, animationLength);
 		cubeModel.rotate(1, true);
+		cubeModel.print();
+		cvm.print();
 	});
 	cwb2.addEventListener('click', function(){
 		cvm.addAnimation(2, -angle, animationLength);
 		cubeModel.rotate(2, false);
+		cubeModel.print();
+		cvm.print();
 	});
 	acwb2.addEventListener('click', function(){
 		cvm.addAnimation(2, angle, animationLength);
 		cubeModel.rotate(2, true);
+		cubeModel.print();
+		cvm.print();
 	});
 	cwb3.addEventListener('click', function(){
 		cvm.addAnimation(3, -angle, animationLength);
@@ -148,6 +157,22 @@ function initializeButtons(){
 	resetButton.addEventListener('click', function(){
 		cvm = restart(cubeModel);
 	});
+	var solveButton = document.getElementById("solve");
+	solveButton.addEventListener('click', function(){
+		//var [pathToSolution, actionPath] = Algorithm.solver(cubeModel, Algorithm.maxColor);
+		var solutions = Algorithm.solver(cubeModel, Algorithm.maxColor);
+		var actionPath = solutions[1];
+		if(solutions != -1){
+			for(var i = 0; i < actionPath.length; i++){
+				actions.push(new Action(actionPath[i].faceIdx, actionPath[i].antiClockwise));
+			}
+			executeAllActions(cvm);
+			clearActions();
+		} 
+		else {
+			console.log("No solution sequence was found.");
+		}
+	});
 }
 
 // Gets normalized mouse positions.
@@ -182,18 +207,23 @@ function keyDown(event)
 	}
 	if(key == 50) { // 2
 		cvm.addAnimation(2, angle, animationLength);
+		cubeModel.rotate(2, false);
 	}
 	if(key == 51) { // 3
 		cvm.addAnimation(3, angle, animationLength);
+		cubeModel.rotate(3, false);
 	}
 	if(key == 52) { // 4
 		cvm.addAnimation(4, angle, animationLength);
+		cubeModel.rotate(4, false);
 	}
 	if(key == 53) { // 5
 		cvm.addAnimation(5, angle, animationLength);
+		cubeModel.rotate(5, false);
 	}
 	if(key == 54) { // 6
 		cvm.addAnimation(0, angle, animationLength);
+		cubeModel.rotate(0, false);
 	}
 }
 
@@ -226,23 +256,6 @@ function clearActions(){
 */
 function executeAllActions(cvm){
 	for(var i = 0; i < actions.length; i++){
-		actions[i].execute(cvm);
-	}
-}
-
-function Action(faceIdx, antiClockwise)
-{
-	this.faceIdx = faceIdx;
-	this.antiClockwise = antiClockwise;
-	this.angle;
-	if (this.antiClockwise) {
-		this.angle = Math.PI/2;
-	} else {
-		this.angle = -Math.PI/2;
-	}
-	
-	this.execute = function(cvm)
-	{
-		cvm.addAnimation(this.faceIdx, this.angle, animationLength);
+		actions[i].execute(cubeModel, cvm);
 	}
 }

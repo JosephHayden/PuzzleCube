@@ -237,16 +237,15 @@ function CubeViewModel(cubeSize, cube)
 			this.face[faceIdx] = rotateArrayCW(this.face[faceIdx], this.dimension);
 
 			for(var i = 0; i < this.dimension; i++){
-				wrap_shift_view_ref_reverse(this.border[faceIdx], this);
+				wrap_shift_view_ref(this.border[faceIdx], this);
 			}
 		} else {
 			this.face[faceIdx] = rotateArrayAntiCW(this.face[faceIdx], this.dimension);
 
 			for(var i = 0; i < this.dimension; i++){
-				wrap_shift_view_ref(this.border[faceIdx], this);
+				wrap_shift_view_ref_reverse(this.border[faceIdx], this);
 			}
 		}
-		this.print();
 	}
 	
 	/*
@@ -934,9 +933,9 @@ function Animation(cvm, faceIdx, angle, rotationTime){
 		// Sample the curve value at x.
 		var t = Animation.easeInOut(x);
 		if(t == 1.0){
-			var antiClockwise = false;
+			var antiClockwise = true;
 			if(this.targetAngle > 0){
-				antiClockwise = true;
+				antiClockwise = false;
 			}
 			this.isRunning = false;
 			this.hasFinished = true;

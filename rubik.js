@@ -29,8 +29,13 @@ function Cube(dimension)
 	this.numSides = 6;
 	this.dimension = dimension;
 	this.face = [];
-	for(var sideIdx=0; sideIdx < this.numSides; sideIdx++){
-		this.face.push(Array(dimension*dimension).fill(sideIdx));
+	for(var faceIdx = 0; faceIdx < this.numSides; faceIdx++){
+		this.face.push(Array(dimension*dimension).fill(faceIdx));
+	}
+	
+	this.solution = [];
+	for(var faceIdx = 0; faceIdx < this.numSides; faceIdx++){
+		this.solution.push(this.face[faceIdx].slice());
 	}
 	
 	/*
@@ -41,6 +46,17 @@ function Cube(dimension)
 	this.get_cell_ref = function(faceIdx, cellIdx)
 	{
 		return this.face[faceIdx][cellIdx];
+	}
+	
+	this.copy = function()
+	{
+		var ret = new Cube(this.dimension);
+		// Copy value of the 2d array.
+		var newFace = this.face.map(function(arr) {
+			return arr.slice();
+		});
+		ret.face = newFace;
+		return ret;
 	}
 	
 	/*
@@ -72,20 +88,20 @@ function Cube(dimension)
 	*/
 	this.rotate = function(faceIdx, antiClockwise)
 	{
-		if(!antiClockwise){
+		if(antiClockwise){
 			// Rotate face.
-			rotateArrayAntiCW(this.face[faceIdx], this.dimension);
+			this.face[faceIdx] = rotateArrayAntiCW(this.face[faceIdx], this.dimension);
 			// Rotate border dim spaces.
 			for(var i = 0; i < this.dimension; i++){
 				//wrap_shift_ref_reverse(this.border[faceIdx], this);
-				wrap_shift_ref(this.border[faceIdx], this);
+				wrap_shift_ref_reverse(this.border[faceIdx], this);
 			}
 		} else {
 			// Rotate face.
-			rotateArrayCW(this.face[faceIdx], this.dimension);
+			this.face[faceIdx] = rotateArrayCW(this.face[faceIdx], this.dimension);
 			// Rotate border dim spaces.
 			for(var i = 0; i < this.dimension; i++){
-				wrap_shift_ref_reverse(this.border[faceIdx], this);
+				wrap_shift_ref(this.border[faceIdx], this);
 				//wrap_shift_ref(this.border[faceIdx], this);
 			}
 		}
@@ -228,7 +244,7 @@ function wrap_shift_ref_reverse(array, cube)
 	array: The array being rotated.
 	dimension: The dimension N of the NxN array which has been flattened.
 */
-function rotateArrayAntiCW(array, dimension)
+function rotateArrayCW(array, dimension)
 {
 	var newArr = Array(array.length);
 	for(var x = 0; x < dimension; x++){
@@ -246,7 +262,7 @@ function rotateArrayAntiCW(array, dimension)
 	array: The array being rotated.
 	dimension: The dimension N of the NxN array which has been flattened.
 */
-function rotateArrayCW(array, dimension)
+function rotateArrayAntiCW(array, dimension)
 {
 	var newArr = Array(array.length);
 	for(var x = 0; x < dimension; x++){
