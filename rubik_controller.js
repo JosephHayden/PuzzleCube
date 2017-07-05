@@ -93,26 +93,18 @@ function initializeButtons(){
 	cwb1.addEventListener('click', function(){
 		cvm.addAnimation(1, -angle, animationLength);
 		cubeModel.rotate(1, false);
-		cubeModel.print();
-		cvm.print();
 	});
 	acwb1.addEventListener('click', function(){
 		cvm.addAnimation(1, angle, animationLength);
 		cubeModel.rotate(1, true);
-		cubeModel.print();
-		cvm.print();
 	});
 	cwb2.addEventListener('click', function(){
 		cvm.addAnimation(2, -angle, animationLength);
 		cubeModel.rotate(2, false);
-		cubeModel.print();
-		cvm.print();
 	});
 	acwb2.addEventListener('click', function(){
 		cvm.addAnimation(2, angle, animationLength);
 		cubeModel.rotate(2, true);
-		cubeModel.print();
-		cvm.print();
 	});
 	cwb3.addEventListener('click', function(){
 		cvm.addAnimation(3, -angle, animationLength);
@@ -168,6 +160,7 @@ function initializeButtons(){
 			}
 			executeAllActions(cvm);
 			clearActions();
+			cubeModel.print();
 		} 
 		else {
 			console.log("No solution sequence was found.");
@@ -203,27 +196,27 @@ function keyDown(event)
 	var angle = Math.PI/2
 	if(key == 49) { // 1
 		cvm.addAnimation(1, angle, animationLength);
-		cubeModel.rotate(1, false);
+		cubeModel.rotate(1, true);
 	}
 	if(key == 50) { // 2
 		cvm.addAnimation(2, angle, animationLength);
-		cubeModel.rotate(2, false);
+		cubeModel.rotate(2, true);
 	}
 	if(key == 51) { // 3
 		cvm.addAnimation(3, angle, animationLength);
-		cubeModel.rotate(3, false);
+		cubeModel.rotate(3, true);
 	}
 	if(key == 52) { // 4
 		cvm.addAnimation(4, angle, animationLength);
-		cubeModel.rotate(4, false);
+		cubeModel.rotate(4, true);
 	}
 	if(key == 53) { // 5
 		cvm.addAnimation(5, angle, animationLength);
-		cubeModel.rotate(5, false);
+		cubeModel.rotate(5, true);
 	}
 	if(key == 54) { // 6
 		cvm.addAnimation(0, angle, animationLength);
-		cubeModel.rotate(0, false);
+		cubeModel.rotate(0, true);
 	}
 }
 

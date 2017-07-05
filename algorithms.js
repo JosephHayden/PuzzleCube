@@ -81,7 +81,7 @@ var Algorithm = new function()
 				actionPath.push(node.action);
 			}
 		}
-		return [path, actionPath];
+		return [path, actionPath.reverse()];
 	};
 	
 	/*
