@@ -35,4 +35,18 @@ function Action(faceIdx, antiClockwise)
 			cvm.addAnimation(this.faceIdx, this.angle, animationLength);
 		}
 	};
+	
+	this.serialize = function()
+	{
+		var arr = [this.faceIdx.toString(), this.antiClockwise.toString(), this.angle.toString()];
+		return arr.join("&");
+	};
+	
+	this.deserialize = function(string)
+	{
+		splitStr = string.split("&");
+		this.faceIdx = parseInt(splitStr[0]);
+		this.antiClockwise = (splitStr[1] == "true");
+		this.angle = parseFloat(splitStr[2]);
+	}
 }

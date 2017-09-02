@@ -9,6 +9,7 @@ var mouseSensitivity = 20;
 var animationLength = 200;
 var ACTIONSPACE; // All possible actions.
 var actions = []; // An array of actions to be taken.
+var workerRunning = false;
 
 function main()
 {
@@ -69,6 +70,17 @@ function main()
 	
 	// Set up algorithm actions.
 	Algorithm.init(ACTIONSPACE);
+}
+
+function serializeActions(){
+	serialized = ""	
+	if (ACTIONSPACE.length > 0) {
+		for (var i = 0; i < ACTIONSPACE.length - 1; i++){
+			serialized = serialized + ACTIONSPACE[i].serialize() + ";";
+		}
+		serialized = serialized + ACTIONSPACE[ACTIONSPACE.length - 1].serialize();
+	}
+	return serialized;
 }
 
 /*
@@ -151,19 +163,42 @@ function initializeButtons(){
 	});
 	var solveButton = document.getElementById("solve");
 	solveButton.addEventListener('click', function(){
-		//var [pathToSolution, actionPath] = Algorithm.solver(cubeModel, Algorithm.maxColor);
-		var solutions = Algorithm.solver(cubeModel, Algorithm.maxColor);
-		var actionPath = solutions[1];
-		if(solutions != -1){
-			for(var i = 0; i < actionPath.length; i++){
-				actions.push(new Action(actionPath[i].faceIdx, actionPath[i].antiClockwise));
+		// Want to come up with the solution sequence asynchronously.
+		if (window.Worker) {
+			if (workerRunning) {
+				alert("Already attempting to find a solution.");
+			} else {
+				var worker = new Worker('solution_worker.js');
+				workerRunning = true;
+				serial_actions = [];
+				worker.postMessage(["start", cubeModel.dimension.toString(), serializeActions(), Algorithm.serializeState(cubeModel.face)]);
+				
+				worker.onmessage = function(e) {
+					if (e.data == ""){
+						console.log("Cube is solved.");
+					}
+					else if (e.data != "no solution"){
+						var actionStrings = e.data[0].split(";");
+						var actionPath = actionStrings.map(function(elem){
+							var action = new Action(0, false);
+							action.deserialize(elem);
+							return action;
+						});
+						console.log("Solution has been found.");
+						// Add actions to list of actions and execute all of them.
+						for (var i = 0; i < actionPath.length; i++){
+							actions.push(new Action(actionPath[i].faceIdx, actionPath[i].antiClockwise));
+						}
+						executeAllActions(cvm);
+						// Once actions have been executed, want to clear list of pending actions.
+						clearActions();
+					} else {
+						console.log("Found no solution.");
+					}
+					worker.terminate();
+					workerRunning = false;
+				}
 			}
-			executeAllActions(cvm);
-			clearActions();
-			cubeModel.print();
-		} 
-		else {
-			console.log("No solution sequence was found.");
 		}
 	});
 }

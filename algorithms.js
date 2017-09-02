@@ -92,7 +92,9 @@ var Algorithm = new function()
 		str = "";
 		for(var faceIdx = 0; faceIdx < state.length; faceIdx++){
 			str = str.concat(state[faceIdx].toString());
-			str = str.concat(".");
+			if(faceIdx < state.length - 1) {
+				str = str.concat(".");
+			}
 		}
 		return str;
 	}
@@ -127,7 +129,7 @@ var Algorithm = new function()
 					if(closedList[nodeIdx].stateEquals(q.state.face) && closedList[nodeIdx].state.f < q.state.f) {
 						// If current path has lower cost than previous path, make parent of previous node parent of current node.
 						q.parent = closedList[nodeIdx].parent;
-					} else {
+					} else if (losedList[nodeIdx].stateEquals(q.state.face) && closedList[nodeIdx].state.f >= q.state.f){
 						// If current path has higher cost, there's already a better path to this node.
 						checkSuccessors = false;
 					}

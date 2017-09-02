@@ -48,6 +48,23 @@ function Cube(dimension)
 		return this.face[faceIdx][cellIdx];
 	}
 	
+	/*
+		Given a serialized state, initializes a cube with this state.
+	*/
+	this.fromSerializedState = function(state)
+	{
+		var newFace = [];
+		var faces = state.split(".");
+		for(var faceIdx = 0; faceIdx < this.numSides; faceIdx++){
+			newFace.push(Array(this.dimension*this.dimension));
+			var cells = faces[faceIdx].split(",");
+			for(var cellIdx = 0; cellIdx < this.face[faceIdx].length; cellIdx++){
+				newFace[faceIdx][cellIdx] = parseInt(cells[cellIdx]);
+			}
+		}
+		this.face = newFace;
+	}
+	
 	this.copy = function()
 	{
 		var ret = new Cube(this.dimension);
@@ -141,6 +158,7 @@ function Cube(dimension)
 		}
 		str = str.concat("\n");
 		console.log(str);
+		return str;
 	}
 }
 

@@ -99,3 +99,40 @@ QUnit.test( "RotateArrayAntiCW", function( assert ) {
 
 	assert.ok( equal, "Expected: " + expected + "\nActual: " + actual );
 });
+
+var twoDimEquals = function(a, b)
+{
+	for(var i = 0; i < a.length; i++){
+		for(var j = 0; j < b.length; j++){
+			if(a[i][j] !== b[i][j]){
+				return false;
+			}
+		}
+	}
+	return true;
+}
+
+QUnit.test( "Cube Serialization 1", function( assert ) {
+	var dimension = 3;
+	var cube = new Cube(dimension);
+	var result = new Cube(dimension);
+	var serialized = Algorithm.serializeState(cube.face);
+	result.fromSerializedState(serialized);
+	
+	var equal = twoDimEquals(cube.face, result.face);
+	
+	assert.ok( equal, "Pre-serialization:\n" + cube.print() + "Post-serialization:\n" + result.print() );
+});
+
+QUnit.test( "Cube Serialization 2", function( assert ) {
+	var dimension = 3;
+	var cube = new Cube(dimension);
+	cube.rotate(1, false);
+	var result = new Cube(dimension);
+	var serialized = Algorithm.serializeState(cube.face);
+	result.fromSerializedState(serialized);
+	
+	var equal = twoDimEquals(cube.face, result.face);
+	
+	assert.ok( equal, "Pre-serialization:\n" + cube.print() + "Post-serialization:\n" + result.print() );
+});
