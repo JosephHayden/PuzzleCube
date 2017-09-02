@@ -43,6 +43,13 @@ var Algorithm = new function()
 		return maxValAndIndex(array);
 	};
 
+	/*
+		Given the state of a cube, returns a cost estimate to get back to the solved state
+		where the cost is the sum of the greatest number of squares of the same color in a face
+		for each color in the cube, where no greatest color count is drawn from the same face.
+		
+		This approximates a measure of "disorder" across the cube faces.
+	*/
 	this.maxColor = function(cubeState)
 	{
 		var faceColors = Array(cubeState.length).fill(-1);
@@ -65,6 +72,35 @@ var Algorithm = new function()
 		var cost = sum(faceColors);
 		return cost;
 	};
+	
+	/*
+		Given a cube state, computes and returns a cost, where cost is the sum of the
+		number of distinct faces in which a specific color of the cube appears, for each color in the cube.
+	*/
+	this.totalSpread = function(cubeState)
+	{
+		var faceColors = Array(cubeState.length).fill(-1);
+		for(var colorIdx = 0; colorIdx < faceColors.length; colorIdx++){
+			for(var faceIdx = 0; faceIdx < cubeState.length; faceIdx++){
+				// Holds the number of faces the color at colorIdx appears in.
+				faceColors[colorIdx] = 0;
+				for(var cellIdx = 0; cellIdx < cubeState[faceIdx].length; cellIdx++){
+					if(cubeState[faceIdx][cellIdx] == colorIdx)
+						faceColors[colorIdx]++;
+				}
+			}
+		}
+		var cost = sum(faceColors);
+		return cost;
+	};
+	
+	/*
+		3D Manhattan distance.
+	*/
+	this.manhattan = function(cubeState)
+	{
+		// TODO: see if this is feasible
+	}
 	
 		/*
 		Given a terminal node, returns a list of nodes that were taken to reach that node, 
@@ -118,7 +154,9 @@ var Algorithm = new function()
 		while(openList.length != 0){
 			// Make sure list remains sorted by f.
 			openList.sort(this.compare);
-			var q = openList.pop();
+			var q = openList[0];
+			// Remove q from openList.
+			openList.shift();
 			var successors = [];
 			var checkSuccessors = true;
 			
@@ -129,7 +167,7 @@ var Algorithm = new function()
 					if(closedList[nodeIdx].stateEquals(q.state.face) && closedList[nodeIdx].state.f < q.state.f) {
 						// If current path has lower cost than previous path, make parent of previous node parent of current node.
 						q.parent = closedList[nodeIdx].parent;
-					} else if (losedList[nodeIdx].stateEquals(q.state.face) && closedList[nodeIdx].state.f >= q.state.f){
+					} else if (closedList[nodeIdx].stateEquals(q.state.face) && closedList[nodeIdx].state.f >= q.state.f){
 						// If current path has higher cost, there's already a better path to this node.
 						checkSuccessors = false;
 					}

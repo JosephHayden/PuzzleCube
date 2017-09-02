@@ -18,13 +18,14 @@ onmessage = function(e) {
 		cube.fromSerializedState(serializedState);
 		console.log('Solution search started.');
 		solveCube(cube, actions);
+		close();
 	}
 }
 
 function solveCube(cube, actions){
 	// solutions consists of [state path, action path]
 	Algorithm.init(actions);
-	var solutions = Algorithm.solver(cube, Algorithm.maxColor);
+	var solutions = Algorithm.solver(cube, Algorithm.totalSpread);
 	var message;
 	if(solutions != -1){
 		var actionPath = solutions[1];

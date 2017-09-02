@@ -9,6 +9,7 @@ var mouseSensitivity = 20;
 var animationLength = 200;
 var ACTIONSPACE; // All possible actions.
 var actions = []; // An array of actions to be taken.
+var worker;
 var workerRunning = false;
 
 function main()
@@ -166,9 +167,12 @@ function initializeButtons(){
 		// Want to come up with the solution sequence asynchronously.
 		if (window.Worker) {
 			if (workerRunning) {
-				alert("Already attempting to find a solution.");
+				if(confirm("Already attempting to find a solution. Terminate search?")){
+					worker.terminate();
+					workerRunning = false;
+				}
 			} else {
-				var worker = new Worker('solution_worker.js');
+				worker = new Worker('solution_worker.js');
 				workerRunning = true;
 				serial_actions = [];
 				worker.postMessage(["start", cubeModel.dimension.toString(), serializeActions(), Algorithm.serializeState(cubeModel.face)]);
@@ -178,7 +182,7 @@ function initializeButtons(){
 						console.log("Cube is solved.");
 					}
 					else if (e.data != "no solution"){
-						var actionStrings = e.data[0].split(";");
+						var actionStrings = e.data.split(";");
 						var actionPath = actionStrings.map(function(elem){
 							var action = new Action(0, false);
 							action.deserialize(elem);
