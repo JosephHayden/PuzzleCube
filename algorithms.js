@@ -125,7 +125,7 @@ var Algorithm = new function()
 	*/
 	this.serializeState = function(state)
 	{
-		str = "";
+		var str = "";
 		for(var faceIdx = 0; faceIdx < state.length; faceIdx++){
 			str = str.concat(state[faceIdx].toString());
 			if(faceIdx < state.length - 1) {
@@ -133,6 +133,55 @@ var Algorithm = new function()
 			}
 		}
 		return str;
+	}
+	
+	this.IDAStar = function(initialState, actions, goalState, policy)
+	{
+		var running = true;
+		var initialNode = new Node(initialState, null, null);
+		initialNode.setAttributes(policy);
+		var threshold = 3;
+		while(running){
+			var temp = this.search(initialNode, 0, policy, threshold, goalState);
+			if(temp.stateEquals(goalState)) {
+				running = false;
+				return this.reconstructPath(temp);
+			}
+			threshold++;
+		}
+	}
+	
+	this.search = function(node, g, policy, threshold, goalState){
+		node.setAttributes(policy);
+		if(g > threshold){
+			return node;
+		}
+		if(node.stateEquals(goalState)){
+			return node;
+		}
+		var min = node;
+		
+		for(var i = 0; i < actions.length; i++){
+			// Perform the action and save the state to a successor node.
+			var nextNode = new Node(actions[i].rotateModel(node.state), node, actions[i]);
+			// Undo the change to node.state, since actions mutate states.
+			actions[i].undo(node.state, null);
+			// Update node's attributes according to the policy.
+			nextNode.setAttributes(policy);
+			
+			// Search next node.
+			// Cost is always one because we are performing one rotation to change state.
+			var cost = 1;
+			var temp = this.search(nextNode, g + cost, policy, threshold, goalState);  
+			if(temp != null && temp.stateEquals(goalState)){
+				return temp;
+			}
+			// Find min f.
+			if(temp.f < min.f){                           
+				min = temp;
+			}
+			return min;
+		}
 	}
 	
 	this.AStar = function(initialState, actions, goalState, policy)
@@ -167,8 +216,10 @@ var Algorithm = new function()
 					if(closedList[nodeIdx].stateEquals(q.state.face) && closedList[nodeIdx].state.f < q.state.f) {
 						// If current path has lower cost than previous path, make parent of previous node parent of current node.
 						q.parent = closedList[nodeIdx].parent;
-					} else if (closedList[nodeIdx].stateEquals(q.state.face) && closedList[nodeIdx].state.f >= q.state.f){
+					} else if ((closedList[nodeIdx].stateEquals(q.state.face) && closedList[nodeIdx].state.f >= q.state.f) ||
+								(q.f == q.parent.f)){
 						// If current path has higher cost, there's already a better path to this node.
+						// If current path has an f value equal to its parent, we're on a dead-end path.
 						checkSuccessors = false;
 					}
 				}
