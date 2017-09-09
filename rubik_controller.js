@@ -71,6 +71,8 @@ function main()
 	
 	// Set up algorithm actions.
 	Algorithm.init(ACTIONSPACE);
+	
+	startGeneratingTrainingData(20);
 }
 
 function serializeActions(){
@@ -88,7 +90,7 @@ function serializeActions(){
 	Creates event handlers for each face rotation button.
 */
 function initializeButtons(){
-	var angle = Math.PI/2
+	var angle = Math.PI/2;
 	
 	var cwb1 = document.getElementById("b1cw");
 	var cwb2 = document.getElementById("b2cw");
@@ -276,6 +278,10 @@ function randomize(steps){
 		actions.push(ACTIONSPACE[actionIdx]);
 		lastAction = ACTIONSPACE[actionIdx];
 	}
+}
+
+function startGeneratingTrainingData(numDataPoints){
+	generateTrainingData(numDataPoints, ACTIONSPACE, 20);
 }
 
 function clearActions(){
